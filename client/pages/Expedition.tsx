@@ -42,7 +42,8 @@ const Expedition: React.FC = () => {
       notes.trim() !== "" ||
       signature !== "";
     setHasFormChanges(hasChanges);
-  }, [selectedDocuments, recipient, notes, signature]);
+    setShouldBlockNavigation(hasChanges);
+  }, [selectedDocuments, recipient, notes, signature, setShouldBlockNavigation]);
 
   // Handle beforeunload for browser navigation
   useEffect(() => {
@@ -56,6 +57,14 @@ const Expedition: React.FC = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasFormChanges]);
+
+  // Set up navigation attempt handler
+  useEffect(() => {
+    setOnNavigationAttempt((path: string) => {
+      setPendingNavigation(path);
+      setShowConfirmDialog(true);
+    });
+  }, [setOnNavigationAttempt]);
 
   const handleConfirmNavigation = () => {
     setHasFormChanges(false);
