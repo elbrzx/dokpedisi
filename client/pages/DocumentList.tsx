@@ -8,6 +8,8 @@ const DocumentList: React.FC = () => {
   const { documents } = useDocumentStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPosition, setFilterPosition] = useState<string>("all");
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [showDocumentDetail, setShowDocumentDetail] = useState(false);
 
   const filteredDocuments = documents.filter((doc) => {
     const matchesSearch =
