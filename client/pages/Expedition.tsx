@@ -80,7 +80,7 @@ const Expedition: React.FC = () => {
     setIsDrawing(true);
   };
 
-  const draw = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasEvent>) => {
+  const draw = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     event.preventDefault();
     if (!isDrawing || !contextRef.current) return;
     
