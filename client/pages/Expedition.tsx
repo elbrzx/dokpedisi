@@ -32,12 +32,6 @@ const Expedition: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
 
-  // Block navigation when form has changes
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      hasFormChanges && currentLocation.pathname !== nextLocation.pathname
-  );
-
   // Track form changes
   useEffect(() => {
     const hasChanges =
@@ -48,13 +42,18 @@ const Expedition: React.FC = () => {
     setHasFormChanges(hasChanges);
   }, [selectedDocuments, recipient, notes, signature]);
 
-  // Handle blocked navigation
+  // Handle beforeunload for browser navigation
   useEffect(() => {
-    if (blocker.state === "blocked") {
-      setShowConfirmDialog(true);
-      setPendingNavigation(blocker.location?.pathname || null);
-    }
-  }, [blocker]);
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasFormChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasFormChanges]);
 
   const handleConfirmNavigation = () => {
     setHasFormChanges(false);
@@ -62,13 +61,11 @@ const Expedition: React.FC = () => {
     if (pendingNavigation) {
       navigate(pendingNavigation);
     }
-    blocker.proceed?.();
   };
 
   const handleCancelNavigation = () => {
     setShowConfirmDialog(false);
     setPendingNavigation(null);
-    blocker.reset?.();
   };
 
   const handleEraseContent = () => {
@@ -81,7 +78,6 @@ const Expedition: React.FC = () => {
     if (pendingNavigation) {
       navigate(pendingNavigation);
     }
-    blocker.proceed?.();
   };
 
   const filteredDocuments = documents.filter(
