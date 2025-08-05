@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Calendar, User, FileText } from "lucide-react";
+import { X, Calendar, User, FileText, Clock, MapPin } from "lucide-react";
 import { Document } from "../lib/documentStore";
 
 interface DocumentDetailProps {
@@ -59,11 +59,13 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
           
           {/* Status */}
           <div>
-            <p className="text-xs text-gray-500 mb-1">Status</p>
+            <p className="text-xs text-gray-500 mb-1">Current Status</p>
             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
               document.position === 'Pending' 
                 ? 'bg-orange-100 text-orange-800'
                 : document.position === 'Approved'
+                ? 'bg-green-100 text-green-800'
+                : document.position === 'Accepted'
                 ? 'bg-green-100 text-green-800'
                 : document.position === 'In Review'
                 ? 'bg-blue-100 text-blue-800'
@@ -72,6 +74,17 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
               {document.position}
             </span>
           </div>
+
+          {/* Current Recipient */}
+          {document.currentRecipient && (
+            <div className="flex items-center gap-3">
+              <MapPin className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-xs text-gray-500">Current Location</p>
+                <p className="text-sm font-medium text-blue-800">{document.currentRecipient}</p>
+              </div>
+            </div>
+          )}
           
           {/* Date Created */}
           <div className="flex items-center gap-3">
@@ -90,59 +103,100 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
             </div>
           </div>
           
-          {/* Expedition Details */}
-          {document.expeditionData && (
-            <>
-              <div className="border-t border-gray-200 pt-4">
-                <h3 className="text-sm font-medium text-gray-900 mb-3">Expedition Details</h3>
-                
-                {/* Date Received */}
-                <div className="flex items-center gap-3 mb-3">
-                  <Calendar className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-xs text-gray-500">Date & Time Received</p>
-                    <p className="text-sm text-gray-900">
-                      {new Intl.DateTimeFormat("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      }).format(document.expeditionData.date)} at {document.expeditionData.time}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Recipient */}
-                <div className="flex items-center gap-3 mb-3">
-                  <User className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-xs text-gray-500">Recipient</p>
-                    <p className="text-sm text-gray-900">{document.expeditionData.recipient}</p>
-                  </div>
-                </div>
-                
-                {/* Notes */}
-                {document.expeditionData.notes && (
-                  <div className="mb-3">
-                    <p className="text-xs text-gray-500 mb-1">Notes</p>
-                    <p className="text-sm text-gray-900">{document.expeditionData.notes}</p>
-                  </div>
-                )}
-                
-                {/* Signature */}
-                {document.expeditionData.signature && (
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">Signature</p>
-                    <div className="border border-gray-200 rounded-lg p-2 bg-gray-50">
-                      <img 
-                        src={document.expeditionData.signature} 
-                        alt="Signature"
-                        className="max-w-full h-20 object-contain"
-                      />
+          {/* Expedition History */}
+          {document.expeditionHistory.length > 0 && (
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-green-600" />
+                Expedition History ({document.expeditionHistory.length})
+              </h3>
+              
+              <div className="space-y-3">
+                {document.expeditionHistory
+                  .sort((a, b) => a.order - b.order)
+                  .map((expedition, index) => (
+                  <div key={expedition.id} className="relative">
+                    {/* Timeline line */}
+                    {index < document.expeditionHistory.length - 1 && (
+                      <div className="absolute left-4 top-8 w-0.5 h-8 bg-gray-200"></div>
+                    )}
+                    
+                    <div className="flex items-start gap-3">
+                      {/* Timeline dot */}
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                        index === document.expeditionHistory.length - 1
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        {expedition.order}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          {/* Recipient */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <User className="h-4 w-4 text-blue-600" />
+                            <p className="text-sm font-medium text-gray-900">
+                              Recipient {expedition.order}: {expedition.recipient}
+                            </p>
+                            {index === document.expeditionHistory.length - 1 && (
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                                Current
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* Date & Time */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <Calendar className="h-4 w-4 text-gray-400" />
+                            <p className="text-xs text-gray-600">
+                              {new Intl.DateTimeFormat("en-US", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              }).format(expedition.date)} at {expedition.time}
+                            </p>
+                          </div>
+                          
+                          {/* Notes */}
+                          {expedition.notes && (
+                            <div className="mb-2">
+                              <p className="text-xs text-gray-500 mb-1">Notes</p>
+                              <p className="text-xs text-gray-700">{expedition.notes}</p>
+                            </div>
+                          )}
+                          
+                          {/* Signature */}
+                          {expedition.signature && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2">Signature</p>
+                              <div className="border border-gray-200 rounded-lg p-2 bg-white">
+                                <img 
+                                  src={expedition.signature} 
+                                  alt={`Signature by ${expedition.recipient}`}
+                                  className="max-w-full h-16 object-contain"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                )}
+                ))}
               </div>
-            </>
+            </div>
+          )}
+
+          {/* No Expeditions Message */}
+          {document.expeditionHistory.length === 0 && (
+            <div className="border-t border-gray-200 pt-4">
+              <div className="text-center py-6 text-gray-500">
+                <Clock className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No expeditions recorded yet</p>
+                <p className="text-xs mt-1">Document is still at its original location</p>
+              </div>
+            </div>
           )}
         </div>
       </div>
