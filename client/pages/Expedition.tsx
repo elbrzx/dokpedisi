@@ -454,6 +454,16 @@ const Expedition: React.FC = () => {
           Submit Expedition
         </button>
       </form>
+
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        title="Cancel editing?"
+        message="You have unsaved changes. What would you like to do?"
+        confirmText="Erase Content"
+        cancelText="Continue Edit"
+        onConfirm={handleEraseContent}
+        onCancel={handleCancelNavigation}
+      />
     </div>
   );
 };
