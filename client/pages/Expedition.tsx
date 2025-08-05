@@ -33,6 +33,58 @@ const Expedition: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
 
+  // Block navigation when form has changes
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasFormChanges && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  // Track form changes
+  useEffect(() => {
+    const hasChanges =
+      selectedDocuments.length > 0 ||
+      recipient.trim() !== "" ||
+      notes.trim() !== "" ||
+      signature !== "";
+    setHasFormChanges(hasChanges);
+  }, [selectedDocuments, recipient, notes, signature]);
+
+  // Handle blocked navigation
+  useEffect(() => {
+    if (blocker.state === "blocked") {
+      setShowConfirmDialog(true);
+      setPendingNavigation(blocker.location?.pathname || null);
+    }
+  }, [blocker]);
+
+  const handleConfirmNavigation = () => {
+    setHasFormChanges(false);
+    setShowConfirmDialog(false);
+    if (pendingNavigation) {
+      navigate(pendingNavigation);
+    }
+    blocker.proceed?.();
+  };
+
+  const handleCancelNavigation = () => {
+    setShowConfirmDialog(false);
+    setPendingNavigation(null);
+    blocker.reset?.();
+  };
+
+  const handleEraseContent = () => {
+    setSelectedDocuments([]);
+    setRecipient("");
+    setNotes("");
+    clearSignature();
+    setHasFormChanges(false);
+    setShowConfirmDialog(false);
+    if (pendingNavigation) {
+      navigate(pendingNavigation);
+    }
+    blocker.proceed?.();
+  };
+
   const filteredDocuments = documents.filter(
     (doc) =>
       doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
