@@ -31,6 +31,14 @@ export const useNavigationGuard = () => useContext(NavigationGuardContext);
 
 function Navigation() {
   const location = useLocation();
+  const { shouldBlockNavigation, onNavigationAttempt } = useNavigationGuard();
+
+  const handleNavClick = (e: React.MouseEvent, path: string) => {
+    if (shouldBlockNavigation && location.pathname !== path) {
+      e.preventDefault();
+      onNavigationAttempt(path);
+    }
+  };
 
   return (
     <nav className="bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50">
