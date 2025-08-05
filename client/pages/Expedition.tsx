@@ -11,19 +11,26 @@ const Expedition: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDocumentSelector, setShowDocumentSelector] = useState(false);
   const [recipient, setRecipient] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [time, setTime] = useState(new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }));
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [time, setTime] = useState(
+    new Date().toLocaleTimeString("en-US", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  );
   const [notes, setNotes] = useState("");
   const [signature, setSignature] = useState<string>("");
   const [isDrawing, setIsDrawing] = useState(false);
-  
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
 
-  const filteredDocuments = documents.filter((doc) =>
-    doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.subject.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredDocuments = documents.filter(
+    (doc) =>
+      doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.subject.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   // Initialize canvas
@@ -33,10 +40,10 @@ const Expedition: React.FC = () => {
 
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    
+
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
-    
+
     const context = canvas.getContext("2d");
     if (!context) return;
 
@@ -48,14 +55,18 @@ const Expedition: React.FC = () => {
   }, []);
 
   // Get coordinates from mouse or touch event
-  const getCoordinates = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const getCoordinates = (
+    event:
+      | React.MouseEvent<HTMLCanvasElement>
+      | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
 
     const rect = canvas.getBoundingClientRect();
     let clientX, clientY;
 
-    if ('touches' in event) {
+    if ("touches" in event) {
       const touch = event.touches[0] || event.changedTouches[0];
       clientX = touch.clientX;
       clientY = touch.clientY;
@@ -66,35 +77,47 @@ const Expedition: React.FC = () => {
 
     return {
       x: clientX - rect.left,
-      y: clientY - rect.top
+      y: clientY - rect.top,
     };
   };
 
-  const startDrawing = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const startDrawing = (
+    event:
+      | React.MouseEvent<HTMLCanvasElement>
+      | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     event.preventDefault();
     const { x, y } = getCoordinates(event);
     if (!contextRef.current) return;
-    
+
     contextRef.current.beginPath();
     contextRef.current.moveTo(x, y);
     setIsDrawing(true);
   };
 
-  const draw = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const draw = (
+    event:
+      | React.MouseEvent<HTMLCanvasElement>
+      | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     event.preventDefault();
     if (!isDrawing || !contextRef.current) return;
-    
+
     const { x, y } = getCoordinates(event);
     contextRef.current.lineTo(x, y);
     contextRef.current.stroke();
   };
 
-  const finishDrawing = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const finishDrawing = (
+    event:
+      | React.MouseEvent<HTMLCanvasElement>
+      | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     event.preventDefault();
     if (!contextRef.current) return;
     contextRef.current.closePath();
     setIsDrawing(false);
-    
+
     // Save signature as base64
     const canvas = canvasRef.current;
     if (canvas) {
@@ -112,10 +135,10 @@ const Expedition: React.FC = () => {
   };
 
   const toggleDocumentSelection = (document: Document) => {
-    setSelectedDocuments(prev => {
-      const isSelected = prev.some(d => d.id === document.id);
+    setSelectedDocuments((prev) => {
+      const isSelected = prev.some((d) => d.id === document.id);
       if (isSelected) {
-        return prev.filter(d => d.id !== document.id);
+        return prev.filter((d) => d.id !== document.id);
       } else {
         return [...prev, document];
       }
@@ -123,19 +146,22 @@ const Expedition: React.FC = () => {
   };
 
   const removeSelectedDocument = (documentId: string) => {
-    setSelectedDocuments(prev => prev.filter(d => d.id !== documentId));
+    setSelectedDocuments((prev) => prev.filter((d) => d.id !== documentId));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (selectedDocuments.length === 0 || !recipient.trim()) {
-      showToast("Please select at least one document and enter a recipient.", "error");
+      showToast(
+        "Please select at least one document and enter a recipient.",
+        "error",
+      );
       return;
     }
 
     addExpedition({
-      documentIds: selectedDocuments.map(d => d.id),
+      documentIds: selectedDocuments.map((d) => d.id),
       recipient: recipient.trim(),
       date: new Date(date),
       time,
@@ -146,12 +172,21 @@ const Expedition: React.FC = () => {
     // Reset form
     setSelectedDocuments([]);
     setRecipient("");
-    setDate(new Date().toISOString().split('T')[0]);
-    setTime(new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }));
+    setDate(new Date().toISOString().split("T")[0]);
+    setTime(
+      new Date().toLocaleTimeString("en-US", {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    );
     setNotes("");
     clearSignature();
 
-    showToast("Expedition submitted successfully! Document positions have been updated.", "success");
+    showToast(
+      "Expedition submitted successfully! Document positions have been updated.",
+      "success",
+    );
   };
 
   return (
@@ -162,14 +197,21 @@ const Expedition: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700">
             Selected Documents ({selectedDocuments.length})
           </label>
-          
+
           {selectedDocuments.length > 0 && (
             <div className="space-y-2 max-h-32 overflow-y-auto">
               {selectedDocuments.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between bg-orange-50 rounded-lg p-2">
+                <div
+                  key={doc.id}
+                  className="flex items-center justify-between bg-orange-50 rounded-lg p-2"
+                >
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-orange-800">{doc.agendaNo}</p>
-                    <p className="text-xs text-orange-600 truncate">{doc.subject}</p>
+                    <p className="text-xs font-medium text-orange-800">
+                      {doc.agendaNo}
+                    </p>
+                    <p className="text-xs text-orange-600 truncate">
+                      {doc.subject}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -206,10 +248,12 @@ const Expedition: React.FC = () => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
-            
+
             <div className="max-h-48 overflow-y-auto space-y-2">
               {filteredDocuments.map((document) => {
-                const isSelected = selectedDocuments.some(d => d.id === document.id);
+                const isSelected = selectedDocuments.some(
+                  (d) => d.id === document.id,
+                );
                 return (
                   <div
                     key={document.id}
@@ -218,22 +262,32 @@ const Expedition: React.FC = () => {
                       "p-2 rounded-lg border cursor-pointer transition-colors",
                       isSelected
                         ? "bg-orange-100 border-orange-300"
-                        : "bg-white border-gray-200 hover:bg-gray-50"
+                        : "bg-white border-gray-200 hover:bg-gray-50",
                     )}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-900">{document.agendaNo}</p>
-                        <p className="text-xs text-gray-600 truncate">{document.subject}</p>
-                        <p className="text-xs text-gray-500">{document.sender}</p>
+                        <p className="text-xs font-medium text-gray-900">
+                          {document.agendaNo}
+                        </p>
+                        <p className="text-xs text-gray-600 truncate">
+                          {document.subject}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {document.sender}
+                        </p>
                       </div>
-                      <div className={cn(
-                        "w-4 h-4 rounded border-2 flex items-center justify-center",
-                        isSelected
-                          ? "bg-orange-600 border-orange-600"
-                          : "border-gray-300"
-                      )}>
-                        {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                      <div
+                        className={cn(
+                          "w-4 h-4 rounded border-2 flex items-center justify-center",
+                          isSelected
+                            ? "bg-orange-600 border-orange-600"
+                            : "border-gray-300",
+                        )}
+                      >
+                        {isSelected && (
+                          <div className="w-2 h-2 bg-white rounded-full" />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -311,9 +365,11 @@ const Expedition: React.FC = () => {
             onTouchMove={draw}
             onTouchEnd={finishDrawing}
             className="w-full h-32 border border-gray-200 rounded-lg bg-white cursor-crosshair touch-none"
-            style={{ touchAction: 'none' }}
+            style={{ touchAction: "none" }}
           />
-          <p className="text-xs text-gray-500 mt-1">Draw your signature above</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Draw your signature above
+          </p>
         </div>
 
         {/* Notes */}

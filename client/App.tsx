@@ -1,5 +1,11 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  NavLink,
+  useLocation,
+} from "react-router-dom";
 import { FileText, Send } from "lucide-react";
 import DocumentList from "./pages/DocumentList";
 import Expedition from "./pages/Expedition";
@@ -9,7 +15,7 @@ import { ToastProvider } from "./lib/toastContext";
 
 function Navigation() {
   const location = useLocation();
-  
+
   return (
     <nav className="bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50">
       <div className="flex">
@@ -20,7 +26,7 @@ function Navigation() {
               "flex-1 flex flex-col items-center justify-center py-2 px-1 text-xs transition-colors",
               isActive || location.pathname === "/"
                 ? "text-orange-600 bg-orange-50"
-                : "text-gray-600"
+                : "text-gray-600",
             )
           }
         >
@@ -32,9 +38,7 @@ function Navigation() {
           className={({ isActive }) =>
             cn(
               "flex-1 flex flex-col items-center justify-center py-2 px-1 text-xs transition-colors",
-              isActive
-                ? "text-orange-600 bg-orange-50"
-                : "text-gray-600"
+              isActive ? "text-orange-600 bg-orange-50" : "text-gray-600",
             )
           }
         >

@@ -9,29 +9,29 @@ const DocumentList: React.FC = () => {
   const [filterPosition, setFilterPosition] = useState<string>("all");
 
   const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = 
+    const matchesSearch =
       doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.subject.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = 
+
+    const matchesFilter =
       filterPosition === "all" || doc.position === filterPosition;
-    
+
     return matchesSearch && matchesFilter;
   });
 
-  const positions = [...new Set(documents.map(doc => doc.position))];
+  const positions = [...new Set(documents.map((doc) => doc.position))];
 
   const getPositionColor = (position: string) => {
     switch (position.toLowerCase()) {
-      case 'pending':
-        return 'bg-orange-100 text-orange-800';
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'in review':
-        return 'bg-blue-100 text-blue-800';
+      case "pending":
+        return "bg-orange-100 text-orange-800";
+      case "approved":
+        return "bg-green-100 text-green-800";
+      case "in review":
+        return "bg-blue-100 text-blue-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -49,7 +49,7 @@ const DocumentList: React.FC = () => {
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-gray-500" />
           <select
@@ -94,7 +94,7 @@ const DocumentList: React.FC = () => {
                     <span
                       className={cn(
                         "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
-                        getPositionColor(document.position)
+                        getPositionColor(document.position),
                       )}
                     >
                       {document.position}
@@ -108,12 +108,12 @@ const DocumentList: React.FC = () => {
                   </p>
                 </div>
               </div>
-              
+
               <div className="text-xs text-gray-500">
-                {new Intl.DateTimeFormat('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
+                {new Intl.DateTimeFormat("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
                 }).format(document.createdAt)}
               </div>
             </div>
