@@ -10,6 +10,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 const Expedition: React.FC = () => {
   const { documents, addExpedition } = useDocumentStore();
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [selectedDocuments, setSelectedDocuments] = useState<Document[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showDocumentSelector, setShowDocumentSelector] = useState(false);
@@ -25,6 +26,9 @@ const Expedition: React.FC = () => {
   const [notes, setNotes] = useState("");
   const [signature, setSignature] = useState<string>("");
   const [isDrawing, setIsDrawing] = useState(false);
+  const [hasFormChanges, setHasFormChanges] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
