@@ -112,12 +112,22 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
 
     set((state) => ({
       expeditions: [...state.expeditions, newExpedition],
+      documents: state.documents.map((doc) =>
+        expedition.documentIds.includes(doc.id)
+          ? {
+              ...doc,
+              position: "Accepted",
+              expeditionData: {
+                date: expedition.date,
+                time: expedition.time,
+                recipient: expedition.recipient,
+                signature: expedition.signature,
+                notes: expedition.notes,
+              },
+            }
+          : doc,
+      ),
     }));
-
-    // Update document positions for expedited documents
-    expedition.documentIds.forEach((docId) => {
-      get().updateDocumentPosition(docId, expedition.recipient);
-    });
   },
 
   getDocumentsByIds: (ids) => {
