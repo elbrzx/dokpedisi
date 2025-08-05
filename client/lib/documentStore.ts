@@ -147,21 +147,27 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
 
     set((state) => ({
       expeditions: [...state.expeditions, newExpedition],
-      documents: state.documents.map((doc) =>
-        expedition.documentIds.includes(doc.id)
-          ? {
-              ...doc,
-              position: "Accepted",
-              expeditionData: {
-                date: expedition.date,
-                time: expedition.time,
-                recipient: expedition.recipient,
-                signature: expedition.signature,
-                notes: expedition.notes,
-              },
-            }
-          : doc,
-      ),
+      documents: state.documents.map((doc) => {
+        if (expedition.documentIds.includes(doc.id)) {
+          const newExpeditionEntry = {
+            id: `exp-${Date.now()}-${doc.id}`,
+            date: expedition.date,
+            time: expedition.time,
+            recipient: expedition.recipient,
+            signature: expedition.signature,
+            notes: expedition.notes,
+            order: doc.expeditionHistory.length + 1,
+          };
+
+          return {
+            ...doc,
+            position: "Accepted",
+            expeditionHistory: [...doc.expeditionHistory, newExpeditionEntry],
+            currentRecipient: expedition.recipient,
+          };
+        }
+        return doc;
+      }),
     }));
   },
 
