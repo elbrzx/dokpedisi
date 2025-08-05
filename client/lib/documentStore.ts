@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 export interface Document {
   id: string;
@@ -74,55 +73,48 @@ const initialDocuments: Document[] = [
   },
 ];
 
-export const useDocumentStore = create<DocumentStore>()(
-  persist(
-    (set, get) => ({
-      documents: initialDocuments,
-      expeditions: [],
-      
-      addDocument: (document) => {
-        const newDocument: Document = {
-          ...document,
-          id: Date.now().toString(),
-          createdAt: new Date(),
-        };
-        set((state) => ({
-          documents: [...state.documents, newDocument],
-        }));
-      },
-      
-      updateDocumentPosition: (documentId, position) => {
-        set((state) => ({
-          documents: state.documents.map((doc) =>
-            doc.id === documentId ? { ...doc, position } : doc
-          ),
-        }));
-      },
-      
-      addExpedition: (expedition) => {
-        const newExpedition: ExpeditionRecord = {
-          ...expedition,
-          id: Date.now().toString(),
-          submittedAt: new Date(),
-        };
-        
-        set((state) => ({
-          expeditions: [...state.expeditions, newExpedition],
-        }));
-        
-        // Update document positions for expedited documents
-        expedition.documentIds.forEach((docId) => {
-          get().updateDocumentPosition(docId, expedition.recipient);
-        });
-      },
-      
-      getDocumentsByIds: (ids) => {
-        const { documents } = get();
-        return documents.filter((doc) => ids.includes(doc.id));
-      },
-    }),
-    {
-      name: 'doc-expedition-store',
-    }
-  )
-);
+export const useDocumentStore = create<DocumentStore>((set, get) => ({
+  documents: initialDocuments,
+  expeditions: [],
+
+  addDocument: (document) => {
+    const newDocument: Document = {
+      ...document,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+    };
+    set((state) => ({
+      documents: [...state.documents, newDocument],
+    }));
+  },
+
+  updateDocumentPosition: (documentId, position) => {
+    set((state) => ({
+      documents: state.documents.map((doc) =>
+        doc.id === documentId ? { ...doc, position } : doc
+      ),
+    }));
+  },
+
+  addExpedition: (expedition) => {
+    const newExpedition: ExpeditionRecord = {
+      ...expedition,
+      id: Date.now().toString(),
+      submittedAt: new Date(),
+    };
+
+    set((state) => ({
+      expeditions: [...state.expeditions, newExpedition],
+    }));
+
+    // Update document positions for expedited documents
+    expedition.documentIds.forEach((docId) => {
+      get().updateDocumentPosition(docId, expedition.recipient);
+    });
+  },
+
+  getDocumentsByIds: (ids) => {
+    const { documents } = get();
+    return documents.filter((doc) => ids.includes(doc.id));
+  },
+}));
