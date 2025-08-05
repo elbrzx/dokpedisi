@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Search, Filter, FileText } from "lucide-react";
-import { useDocumentStore } from "../lib/documentStore";
+import { useDocumentStore, Document } from "../lib/documentStore";
 import { cn } from "../lib/utils";
+import DocumentDetail from "../components/DocumentDetail";
 
 const DocumentList: React.FC = () => {
   const { documents } = useDocumentStore();
