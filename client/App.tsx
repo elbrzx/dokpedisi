@@ -88,7 +88,9 @@ function AppHeader() {
 
 function NavigationGuardProvider({ children }: { children: React.ReactNode }) {
   const [shouldBlockNavigation, setShouldBlockNavigation] = useState(false);
-  const [onNavigationAttempt, setOnNavigationAttempt] = useState<(path: string) => void>(() => {});
+  const [onNavigationAttempt, setOnNavigationAttempt] = useState<
+    (path: string) => void
+  >(() => {});
 
   return (
     <NavigationGuardContext.Provider

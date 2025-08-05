@@ -25,11 +25,11 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black bg-opacity-30"
         onClick={onCancel}
       />
-      
+
       {/* Dialog */}
       <div className="relative bg-white rounded-lg shadow-lg mx-4 w-full max-w-sm">
         <div className="p-4">
@@ -42,9 +42,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               <X className="h-4 w-4" />
             </button>
           </div>
-          
+
           <p className="text-sm text-gray-600 mb-4">{message}</p>
-          
+
           <div className="flex gap-2">
             <button
               onClick={onCancel}

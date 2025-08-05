@@ -9,7 +9,9 @@ const DocumentList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"status" | "agenda">("status");
   const [filterValue, setFilterValue] = useState<string>("all");
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(
+    null,
+  );
   const [showDocumentDetail, setShowDocumentDetail] = useState(false);
 
   const filteredDocuments = documents.filter((doc) => {
@@ -18,19 +20,19 @@ const DocumentList: React.FC = () => {
       doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.currentRecipient?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.expeditionHistory.some(exp => 
-        exp.recipient.toLowerCase().includes(searchTerm.toLowerCase())
+      doc.expeditionHistory.some((exp) =>
+        exp.recipient.toLowerCase().includes(searchTerm.toLowerCase()),
       );
 
     let matchesFilter = true;
-    
+
     if (filterType === "status") {
       matchesFilter = filterValue === "all" || doc.position === filterValue;
     } else if (filterType === "agenda") {
       if (filterValue === "all") {
         matchesFilter = true;
       } else {
-        matchesFilter = 
+        matchesFilter =
           doc.agendaNo.toLowerCase().includes(filterValue.toLowerCase()) ||
           doc.subject.toLowerCase().includes(filterValue.toLowerCase());
       }
@@ -78,9 +80,9 @@ const DocumentList: React.FC = () => {
       return null;
     }
 
-    const recipients = document.expeditionHistory.map(exp => exp.recipient);
+    const recipients = document.expeditionHistory.map((exp) => exp.recipient);
     const uniqueRecipients = [...new Set(recipients)];
-    
+
     if (uniqueRecipients.length === 1) {
       return `Recipient: ${uniqueRecipients[0]}`;
     } else {
@@ -110,7 +112,7 @@ const DocumentList: React.FC = () => {
             "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
             filterType === "status"
               ? "bg-orange-100 text-orange-800 border border-orange-200"
-              : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+              : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200",
           )}
         >
           <User className="h-4 w-4" />
@@ -122,7 +124,7 @@ const DocumentList: React.FC = () => {
             "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
             filterType === "agenda"
               ? "bg-orange-100 text-orange-800 border border-orange-200"
-              : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+              : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200",
           )}
         >
           <Hash className="h-4 w-4" />
@@ -163,7 +165,9 @@ const DocumentList: React.FC = () => {
             <optgroup label="Subjects">
               {subjects.map((subject) => (
                 <option key={`subject-${subject}`} value={subject}>
-                  {subject.length > 30 ? `${subject.substring(0, 30)}...` : subject}
+                  {subject.length > 30
+                    ? `${subject.substring(0, 30)}...`
+                    : subject}
                 </option>
               ))}
             </optgroup>
@@ -211,7 +215,8 @@ const DocumentList: React.FC = () => {
                     </span>
                     {document.expeditionHistory.length > 0 && (
                       <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                        {document.expeditionHistory.length} expedition{document.expeditionHistory.length > 1 ? 's' : ''}
+                        {document.expeditionHistory.length} expedition
+                        {document.expeditionHistory.length > 1 ? "s" : ""}
                       </span>
                     )}
                   </div>
@@ -230,17 +235,23 @@ const DocumentList: React.FC = () => {
               </div>
 
               <div className="text-xs text-gray-500">
-                Created: {new Intl.DateTimeFormat("en-US", {
+                Created:{" "}
+                {new Intl.DateTimeFormat("en-US", {
                   year: "numeric",
                   month: "short",
                   day: "numeric",
                 }).format(document.createdAt)}
                 {document.expeditionHistory.length > 0 && (
                   <span className="ml-2">
-                    • Last expedition: {new Intl.DateTimeFormat("en-US", {
+                    • Last expedition:{" "}
+                    {new Intl.DateTimeFormat("en-US", {
                       month: "short",
                       day: "numeric",
-                    }).format(document.expeditionHistory[document.expeditionHistory.length - 1].date)}
+                    }).format(
+                      document.expeditionHistory[
+                        document.expeditionHistory.length - 1
+                      ].date,
+                    )}
                   </span>
                 )}
               </div>

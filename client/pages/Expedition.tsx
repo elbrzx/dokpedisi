@@ -11,7 +11,8 @@ const Expedition: React.FC = () => {
   const { documents, addExpedition } = useDocumentStore();
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const { setShouldBlockNavigation, setOnNavigationAttempt } = useNavigationGuard();
+  const { setShouldBlockNavigation, setOnNavigationAttempt } =
+    useNavigationGuard();
   const [selectedDocuments, setSelectedDocuments] = useState<Document[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showDocumentSelector, setShowDocumentSelector] = useState(false);
@@ -29,7 +30,9 @@ const Expedition: React.FC = () => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasFormChanges, setHasFormChanges] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(
+    null,
+  );
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -43,19 +46,25 @@ const Expedition: React.FC = () => {
       signature !== "";
     setHasFormChanges(hasChanges);
     setShouldBlockNavigation(hasChanges);
-  }, [selectedDocuments, recipient, notes, signature, setShouldBlockNavigation]);
+  }, [
+    selectedDocuments,
+    recipient,
+    notes,
+    signature,
+    setShouldBlockNavigation,
+  ]);
 
   // Handle beforeunload for browser navigation
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasFormChanges) {
         e.preventDefault();
-        e.returnValue = '';
+        e.returnValue = "";
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasFormChanges]);
 
   // Set up navigation attempt handler
