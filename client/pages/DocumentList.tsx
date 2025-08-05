@@ -98,7 +98,8 @@ const DocumentList: React.FC = () => {
           filteredDocuments.map((document) => (
             <div
               key={document.id}
-              className="bg-white rounded-lg border border-gray-200 p-3 space-y-2"
+              onClick={() => handleDocumentClick(document)}
+              className="bg-white rounded-lg border border-gray-200 p-3 space-y-2 cursor-pointer hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
