@@ -86,22 +86,42 @@ function AppHeader() {
   );
 }
 
+function NavigationGuardProvider({ children }: { children: React.ReactNode }) {
+  const [shouldBlockNavigation, setShouldBlockNavigation] = useState(false);
+  const [onNavigationAttempt, setOnNavigationAttempt] = useState<(path: string) => void>(() => {});
+
+  return (
+    <NavigationGuardContext.Provider
+      value={{
+        shouldBlockNavigation,
+        setShouldBlockNavigation,
+        onNavigationAttempt,
+        setOnNavigationAttempt: (fn) => setOnNavigationAttempt(() => fn),
+      }}
+    >
+      {children}
+    </NavigationGuardContext.Provider>
+  );
+}
+
 function App() {
   return (
     <ToastProvider>
-      <BrowserRouter>
-        <div className="min-h-screen bg-gray-50 pb-16">
-          <AppHeader />
-          <main className="min-h-screen">
-            <Routes>
-              <Route path="/" element={<DocumentList />} />
-              <Route path="/expedition" element={<Expedition />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          <Navigation />
-        </div>
-      </BrowserRouter>
+      <NavigationGuardProvider>
+        <BrowserRouter>
+          <div className="min-h-screen bg-gray-50 pb-16">
+            <AppHeader />
+            <main className="min-h-screen">
+              <Routes>
+                <Route path="/" element={<DocumentList />} />
+                <Route path="/expedition" element={<Expedition />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </main>
+            <Navigation />
+          </div>
+        </BrowserRouter>
+      </NavigationGuardProvider>
     </ToastProvider>
   );
 }
