@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Search, X, Upload, Save, Trash2 } from "lucide-react";
+import { Search, X, Save, Trash2 } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
+import { useToast } from "../lib/toastContext";
 import { cn } from "../lib/utils";
 
 const Expedition: React.FC = () => {
   const { documents, addExpedition } = useDocumentStore();
+  const { showToast } = useToast();
   const [selectedDocuments, setSelectedDocuments] = useState<Document[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showDocumentSelector, setShowDocumentSelector] = useState(false);
@@ -29,31 +31,66 @@ const Expedition: React.FC = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    canvas.width = canvas.offsetWidth * 2;
-    canvas.height = canvas.offsetHeight * 2;
-    canvas.style.width = `${canvas.offsetWidth}px`;
-    canvas.style.height = `${canvas.offsetHeight}px`;
-
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    
     const context = canvas.getContext("2d");
     if (!context) return;
 
-    context.scale(2, 2);
+    context.scale(dpr, dpr);
     context.lineCap = "round";
     context.strokeStyle = "#1f2937";
     context.lineWidth = 2;
     contextRef.current = context;
   }, []);
 
-  const startDrawing = ({ nativeEvent }: React.MouseEvent<HTMLCanvasElement>) => {
-    const { offsetX, offsetY } = nativeEvent;
+  // Get coordinates from mouse or touch event
+  const getCoordinates = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+
+    const rect = canvas.getBoundingClientRect();
+    let clientX, clientY;
+
+    if ('touches' in event) {
+      const touch = event.touches[0] || event.changedTouches[0];
+      clientX = touch.clientX;
+      clientY = touch.clientY;
+    } else {
+      clientX = event.clientX;
+      clientY = event.clientY;
+    }
+
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
+  };
+
+  const startDrawing = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
+    const { x, y } = getCoordinates(event);
     if (!contextRef.current) return;
     
     contextRef.current.beginPath();
-    contextRef.current.moveTo(offsetX, offsetY);
+    contextRef.current.moveTo(x, y);
     setIsDrawing(true);
   };
 
-  const finishDrawing = () => {
+  const draw = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasEvent>) => {
+    event.preventDefault();
+    if (!isDrawing || !contextRef.current) return;
+    
+    const { x, y } = getCoordinates(event);
+    contextRef.current.lineTo(x, y);
+    contextRef.current.stroke();
+  };
+
+  const finishDrawing = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
     if (!contextRef.current) return;
     contextRef.current.closePath();
     setIsDrawing(false);
@@ -63,14 +100,6 @@ const Expedition: React.FC = () => {
     if (canvas) {
       setSignature(canvas.toDataURL());
     }
-  };
-
-  const draw = ({ nativeEvent }: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !contextRef.current) return;
-    
-    const { offsetX, offsetY } = nativeEvent;
-    contextRef.current.lineTo(offsetX, offsetY);
-    contextRef.current.stroke();
   };
 
   const clearSignature = () => {
@@ -101,7 +130,7 @@ const Expedition: React.FC = () => {
     e.preventDefault();
     
     if (selectedDocuments.length === 0 || !recipient.trim()) {
-      alert("Please select at least one document and enter a recipient.");
+      showToast("Please select at least one document and enter a recipient.", "error");
       return;
     }
 
@@ -122,7 +151,7 @@ const Expedition: React.FC = () => {
     setNotes("");
     clearSignature();
 
-    alert("Expedition submitted successfully!");
+    showToast("Expedition submitted successfully! Document positions have been updated.", "success");
   };
 
   return (
@@ -275,9 +304,14 @@ const Expedition: React.FC = () => {
           <canvas
             ref={canvasRef}
             onMouseDown={startDrawing}
-            onMouseUp={finishDrawing}
             onMouseMove={draw}
-            className="w-full h-32 border border-gray-200 rounded-lg bg-white cursor-crosshair"
+            onMouseUp={finishDrawing}
+            onMouseLeave={finishDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={finishDrawing}
+            className="w-full h-32 border border-gray-200 rounded-lg bg-white cursor-crosshair touch-none"
+            style={{ touchAction: 'none' }}
           />
           <p className="text-xs text-gray-500 mt-1">Draw your signature above</p>
         </div>
