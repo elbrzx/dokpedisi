@@ -60,6 +60,7 @@ function Navigation() {
         </NavLink>
         <NavLink
           to="/expedition"
+          onClick={(e) => handleNavClick(e, "/expedition")}
           className={({ isActive }) =>
             cn(
               "flex-1 flex flex-col items-center justify-center py-2 px-1 text-xs transition-colors",
