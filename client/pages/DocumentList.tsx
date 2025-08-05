@@ -136,6 +136,12 @@ const DocumentList: React.FC = () => {
           ))
         )}
       </div>
+
+      <DocumentDetail
+        document={selectedDocument}
+        isOpen={showDocumentDetail}
+        onClose={handleCloseDetail}
+      />
     </div>
   );
 };
