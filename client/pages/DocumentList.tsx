@@ -31,11 +31,23 @@ const DocumentList: React.FC = () => {
         return "bg-orange-100 text-orange-800";
       case "approved":
         return "bg-green-100 text-green-800";
+      case "accepted":
+        return "bg-green-100 text-green-800";
       case "in review":
         return "bg-blue-100 text-blue-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const handleDocumentClick = (document: Document) => {
+    setSelectedDocument(document);
+    setShowDocumentDetail(true);
+  };
+
+  const handleCloseDetail = () => {
+    setShowDocumentDetail(false);
+    setSelectedDocument(null);
   };
 
   return (
