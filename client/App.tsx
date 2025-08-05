@@ -1,4 +1,4 @@
-import React from "react";
+import React, { createContext, useContext, useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -12,6 +12,22 @@ import Expedition from "./pages/Expedition";
 import NotFound from "./pages/NotFound";
 import { cn } from "./lib/utils";
 import { ToastProvider } from "./lib/toastContext";
+
+interface NavigationGuardContextType {
+  shouldBlockNavigation: boolean;
+  setShouldBlockNavigation: (value: boolean) => void;
+  onNavigationAttempt: (path: string) => void;
+  setOnNavigationAttempt: (fn: (path: string) => void) => void;
+}
+
+const NavigationGuardContext = createContext<NavigationGuardContextType>({
+  shouldBlockNavigation: false,
+  setShouldBlockNavigation: () => {},
+  onNavigationAttempt: () => {},
+  setOnNavigationAttempt: () => {},
+});
+
+export const useNavigationGuard = () => useContext(NavigationGuardContext);
 
 function Navigation() {
   const location = useLocation();
