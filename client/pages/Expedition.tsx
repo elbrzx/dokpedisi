@@ -3,6 +3,9 @@ import { Search, X, Save, Trash2 } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
 import { useToast } from "../lib/toastContext";
 import { cn } from "../lib/utils";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useBlocker } from "react-router-dom";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 const Expedition: React.FC = () => {
   const { documents, addExpedition } = useDocumentStore();
