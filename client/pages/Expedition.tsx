@@ -5,6 +5,7 @@ import { useToast } from "../lib/toastContext";
 import { cn } from "../lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { useNavigationGuard } from "../App";
 
 const Expedition: React.FC = () => {
   const { documents, addExpedition } = useDocumentStore();
