@@ -7,13 +7,16 @@ export interface Document {
   subject: string;
   position: string;
   createdAt: Date;
-  expeditionData?: {
+  expeditionHistory: Array<{
+    id: string;
     date: Date;
     time: string;
     recipient: string;
     signature?: string;
     notes?: string;
-  };
+    order: number;
+  }>;
+  currentRecipient?: string;
 }
 
 export interface ExpeditionRecord {
