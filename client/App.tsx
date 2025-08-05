@@ -5,6 +5,7 @@ import DocumentList from "./pages/DocumentList";
 import Expedition from "./pages/Expedition";
 import NotFound from "./pages/NotFound";
 import { cn } from "./lib/utils";
+import { ToastProvider } from "./lib/toastContext";
 
 function Navigation() {
   const location = useLocation();
@@ -57,19 +58,21 @@ function AppHeader() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-gray-50 pb-16">
-        <AppHeader />
-        <main className="min-h-screen">
-          <Routes>
-            <Route path="/" element={<DocumentList />} />
-            <Route path="/expedition" element={<Expedition />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-        <Navigation />
-      </div>
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <div className="min-h-screen bg-gray-50 pb-16">
+          <AppHeader />
+          <main className="min-h-screen">
+            <Routes>
+              <Route path="/" element={<DocumentList />} />
+              <Route path="/expedition" element={<Expedition />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
+          <Navigation />
+        </div>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
 
