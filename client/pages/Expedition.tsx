@@ -68,6 +68,7 @@ const Expedition: React.FC = () => {
 
   const handleConfirmNavigation = () => {
     setHasFormChanges(false);
+    setShouldBlockNavigation(false);
     setShowConfirmDialog(false);
     if (pendingNavigation) {
       navigate(pendingNavigation);
@@ -85,6 +86,7 @@ const Expedition: React.FC = () => {
     setNotes("");
     clearSignature();
     setHasFormChanges(false);
+    setShouldBlockNavigation(false);
     setShowConfirmDialog(false);
     if (pendingNavigation) {
       navigate(pendingNavigation);
