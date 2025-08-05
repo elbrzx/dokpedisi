@@ -249,6 +249,8 @@ const Expedition: React.FC = () => {
     );
     setNotes("");
     clearSignature();
+    setHasFormChanges(false);
+    setShouldBlockNavigation(false);
 
     showToast(
       "Expedition submitted successfully! Document positions have been updated.",
