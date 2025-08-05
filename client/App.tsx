@@ -1,30 +1,76 @@
-import "./global.css";
-
-import { Toaster } from "@/components/ui/toaster";
-import { createRoot } from "react-dom/client";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import React from "react";
+import { BrowserRouter, Routes, Route, NavLink, useLocation } from "react-router-dom";
+import { FileText, Send } from "lucide-react";
+import DocumentList from "./pages/DocumentList";
+import Expedition from "./pages/Expedition";
 import NotFound from "./pages/NotFound";
+import { cn } from "./lib/utils";
 
-const queryClient = new QueryClient();
+function Navigation() {
+  const location = useLocation();
+  
+  return (
+    <nav className="bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50">
+      <div className="flex">
+        <NavLink
+          to="/"
+          className={({ isActive }) =>
+            cn(
+              "flex-1 flex flex-col items-center justify-center py-2 px-1 text-xs transition-colors",
+              isActive || location.pathname === "/"
+                ? "text-orange-600 bg-orange-50"
+                : "text-gray-600"
+            )
+          }
+        >
+          <FileText className="h-5 w-5 mb-1" />
+          <span>Documents</span>
+        </NavLink>
+        <NavLink
+          to="/expedition"
+          className={({ isActive }) =>
+            cn(
+              "flex-1 flex flex-col items-center justify-center py-2 px-1 text-xs transition-colors",
+              isActive
+                ? "text-orange-600 bg-orange-50"
+                : "text-gray-600"
+            )
+          }
+        >
+          <Send className="h-5 w-5 mb-1" />
+          <span>Expedition</span>
+        </NavLink>
+      </div>
+    </nav>
+  );
+}
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function AppHeader() {
+  return (
+    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+      <div className="px-4 py-3">
+        <h1 className="text-lg font-semibold text-gray-900">Doc Expedition</h1>
+      </div>
+    </header>
+  );
+}
 
-createRoot(document.getElementById("root")!).render(<App />);
+function App() {
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen bg-gray-50 pb-16">
+        <AppHeader />
+        <main className="min-h-screen">
+          <Routes>
+            <Route path="/" element={<DocumentList />} />
+            <Route path="/expedition" element={<Expedition />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+        <Navigation />
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
