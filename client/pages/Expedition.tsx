@@ -11,6 +11,7 @@ const Expedition: React.FC = () => {
   const { documents, addExpedition } = useDocumentStore();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const { setShouldBlockNavigation, setOnNavigationAttempt } = useNavigationGuard();
   const [selectedDocuments, setSelectedDocuments] = useState<Document[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showDocumentSelector, setShowDocumentSelector] = useState(false);
