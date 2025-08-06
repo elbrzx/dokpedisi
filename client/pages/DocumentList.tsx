@@ -31,7 +31,7 @@ const DocumentList: React.FC = () => {
     const matchesSearch =
       doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.perihal.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.currentRecipient?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.expeditionHistory.some((exp) =>
         exp.recipient.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -47,7 +47,7 @@ const DocumentList: React.FC = () => {
       } else {
         matchesFilter =
           doc.agendaNo.toLowerCase().includes(filterValue.toLowerCase()) ||
-          doc.subject.toLowerCase().includes(filterValue.toLowerCase());
+          doc.perihal.toLowerCase().includes(filterValue.toLowerCase());
       }
     }
 
