@@ -75,14 +75,18 @@ const initialLocalDocuments: Document[] = [
 ];
 
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
-  documents: initialDocuments,
+  documents: initialLocalDocuments,
   expeditions: [],
+  isLoadingGoogleSheets: false,
+  googleSheetsError: null,
+  lastGoogleSheetsSync: null,
 
   addDocument: (document) => {
     const newDocument: Document = {
       ...document,
       id: Date.now().toString(),
       createdAt: new Date(),
+      isFromGoogleSheets: false,
     };
     set((state) => ({
       documents: [...state.documents, newDocument],
@@ -133,5 +137,46 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   getDocumentsByIds: (ids) => {
     const { documents } = get();
     return documents.filter((doc) => ids.includes(doc.id));
+  },
+
+  loadGoogleSheetsData: async () => {
+    set({ isLoadingGoogleSheets: true, googleSheetsError: null });
+
+    try {
+      const googleSheetsDocuments = await fetchDocumentsFromGoogleSheets();
+
+      if (googleSheetsDocuments.length > 0) {
+        const convertedDocuments = googleSheetsDocuments.map((doc, index) =>
+          convertGoogleSheetToDocument(doc, index)
+        );
+
+        set((state) => ({
+          documents: [
+            ...state.documents.filter(doc => !doc.isFromGoogleSheets), // Keep local documents
+            ...convertedDocuments, // Add Google Sheets documents
+          ],
+          isLoadingGoogleSheets: false,
+          lastGoogleSheetsSync: new Date(),
+        }));
+
+        console.log(`Loaded ${convertedDocuments.length} documents from Google Sheets`);
+      } else {
+        set({
+          isLoadingGoogleSheets: false,
+          googleSheetsError: "No data found in Google Sheets or sheet is not publicly accessible"
+        });
+      }
+    } catch (error) {
+      console.error('Error loading Google Sheets data:', error);
+      set({
+        isLoadingGoogleSheets: false,
+        googleSheetsError: error instanceof Error ? error.message : "Failed to load Google Sheets data"
+      });
+    }
+  },
+
+  syncWithGoogleSheets: async () => {
+    const { loadGoogleSheetsData } = get();
+    await loadGoogleSheetsData();
   },
 }));
