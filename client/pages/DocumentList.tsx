@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Search, Filter, FileText, Hash, User } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Filter, FileText, Hash, User, RefreshCw, Download, AlertCircle } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
 import { cn } from "../lib/utils";
 import DocumentDetail from "../components/DocumentDetail";
