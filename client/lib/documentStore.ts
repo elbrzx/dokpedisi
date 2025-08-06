@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { fetchDocumentsFromGoogleSheets, GoogleSheetDocument } from "./googleSheetsService";
 
 export interface Document {
   id: string;
