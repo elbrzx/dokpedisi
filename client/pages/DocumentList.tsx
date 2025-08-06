@@ -5,7 +5,15 @@ import { cn } from "../lib/utils";
 import DocumentDetail from "../components/DocumentDetail";
 
 const DocumentList: React.FC = () => {
-  const { documents } = useDocumentStore();
+  const {
+    documents,
+    isLoadingGoogleSheets,
+    googleSheetsError,
+    lastGoogleSheetsSync,
+    loadGoogleSheetsData,
+    syncWithGoogleSheets
+  } = useDocumentStore();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"status" | "agenda">("status");
   const [filterValue, setFilterValue] = useState<string>("all");
@@ -13,6 +21,11 @@ const DocumentList: React.FC = () => {
     null,
   );
   const [showDocumentDetail, setShowDocumentDetail] = useState(false);
+
+  // Load Google Sheets data on component mount
+  useEffect(() => {
+    loadGoogleSheetsData();
+  }, [loadGoogleSheetsData]);
 
   const filteredDocuments = documents.filter((doc) => {
     const matchesSearch =
