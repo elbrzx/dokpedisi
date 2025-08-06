@@ -46,79 +46,31 @@ interface DocumentStore {
   syncWithGoogleSheets: () => Promise<void>;
 }
 
-// Sample documents for demonstration
-const initialDocuments: Document[] = [
+// Helper function to convert Google Sheets data to Document format
+function convertGoogleSheetToDocument(sheetDoc: GoogleSheetDocument, index: number): Document {
+  return {
+    id: `gs-${Date.now()}-${index}`,
+    agendaNo: sheetDoc.agendaNumber,
+    sender: sheetDoc.sender,
+    perihal: sheetDoc.perihal,
+    position: "Pending",
+    createdAt: new Date(),
+    expeditionHistory: [],
+    isFromGoogleSheets: true,
+  };
+}
+
+// Sample local documents for demonstration (will be merged with Google Sheets data)
+const initialLocalDocuments: Document[] = [
   {
-    id: "1",
-    agendaNo: "DOC-001",
-    sender: "Finance Department",
-    subject: "Budget Approval Request",
+    id: "local-1",
+    agendaNo: "LOCAL-001",
+    sender: "Local System",
+    perihal: "System Test Document",
     position: "Pending",
     createdAt: new Date("2024-01-15"),
     expeditionHistory: [],
-  },
-  {
-    id: "2",
-    agendaNo: "DOC-002",
-    sender: "HR Department",
-    subject: "New Employee Onboarding",
-    position: "In Review",
-    createdAt: new Date("2024-01-16"),
-    expeditionHistory: [
-      {
-        id: "exp-1",
-        date: new Date("2024-01-16"),
-        time: "09:30",
-        recipient: "John Smith",
-        order: 1,
-        notes: "Initial review by HR Manager",
-      },
-    ],
-    currentRecipient: "John Smith",
-  },
-  {
-    id: "3",
-    agendaNo: "DOC-003",
-    sender: "Legal Department",
-    subject: "Contract Amendment",
-    position: "Pending",
-    createdAt: new Date("2024-01-17"),
-    expeditionHistory: [],
-  },
-  {
-    id: "4",
-    agendaNo: "DOC-004",
-    sender: "Operations",
-    subject: "Equipment Purchase Order",
-    position: "Approved",
-    createdAt: new Date("2024-01-18"),
-    expeditionHistory: [
-      {
-        id: "exp-2",
-        date: new Date("2024-01-18"),
-        time: "14:15",
-        recipient: "Operations Manager",
-        order: 1,
-      },
-      {
-        id: "exp-3",
-        date: new Date("2024-01-19"),
-        time: "10:30",
-        recipient: "Finance Director",
-        order: 2,
-        notes: "Final approval granted",
-      },
-    ],
-    currentRecipient: "Finance Director",
-  },
-  {
-    id: "5",
-    agendaNo: "DOC-005",
-    sender: "IT Department",
-    subject: "System Upgrade Proposal",
-    position: "Pending",
-    createdAt: new Date("2024-01-19"),
-    expeditionHistory: [],
+    isFromGoogleSheets: false,
   },
 ];
 
