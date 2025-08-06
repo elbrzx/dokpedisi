@@ -88,9 +88,15 @@ function AppHeader() {
 
 function NavigationGuardProvider({ children }: { children: React.ReactNode }) {
   const [shouldBlockNavigation, setShouldBlockNavigation] = useState(false);
-  const [onNavigationAttempt, setOnNavigationAttempt] = useState<
-    (path: string) => void
-  >(() => {});
+  const onNavigationAttemptRef = useRef<(path: string) => void>(() => {});
+
+  const setOnNavigationAttempt = useCallback((fn: (path: string) => void) => {
+    onNavigationAttemptRef.current = fn;
+  }, []);
+
+  const onNavigationAttempt = useCallback((path: string) => {
+    onNavigationAttemptRef.current(path);
+  }, []);
 
   return (
     <NavigationGuardContext.Provider
@@ -98,7 +104,7 @@ function NavigationGuardProvider({ children }: { children: React.ReactNode }) {
         shouldBlockNavigation,
         setShouldBlockNavigation,
         onNavigationAttempt,
-        setOnNavigationAttempt: (fn) => setOnNavigationAttempt(() => fn),
+        setOnNavigationAttempt,
       }}
     >
       {children}
