@@ -5,7 +5,7 @@ export interface Document {
   id: string;
   agendaNo: string;
   sender: string;
-  subject: string;
+  perihal: string; // Changed from subject to perihal
   position: string;
   createdAt: Date;
   expeditionHistory: Array<{
@@ -18,6 +18,7 @@ export interface Document {
     order: number;
   }>;
   currentRecipient?: string;
+  isFromGoogleSheets?: boolean;
 }
 
 export interface ExpeditionRecord {
