@@ -56,7 +56,7 @@ const DocumentList: React.FC = () => {
 
   const positions = [...new Set(documents.map((doc) => doc.position))];
   const agendaNumbers = [...new Set(documents.map((doc) => doc.agendaNo))];
-  const subjects = [...new Set(documents.map((doc) => doc.subject))];
+  const perihals = [...new Set(documents.map((doc) => doc.perihal))];
 
   const getPositionColor = (position: string) => {
     switch (position.toLowerCase()) {
