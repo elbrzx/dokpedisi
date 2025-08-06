@@ -69,10 +69,12 @@ const Expedition: React.FC = () => {
 
   // Set up navigation attempt handler
   useEffect(() => {
-    setOnNavigationAttempt((path: string) => {
+    const handleNavigationAttempt = (path: string) => {
       setPendingNavigation(path);
       setShowConfirmDialog(true);
-    });
+    };
+
+    setOnNavigationAttempt(handleNavigationAttempt);
   }, [setOnNavigationAttempt]);
 
   const handleConfirmNavigation = () => {
