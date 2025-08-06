@@ -35,10 +35,15 @@ export interface ExpeditionRecord {
 interface DocumentStore {
   documents: Document[];
   expeditions: ExpeditionRecord[];
+  isLoadingGoogleSheets: boolean;
+  googleSheetsError: string | null;
+  lastGoogleSheetsSync: Date | null;
   addDocument: (document: Omit<Document, "id" | "createdAt">) => void;
   updateDocumentPosition: (documentId: string, position: string) => void;
   addExpedition: (expedition: Omit<ExpeditionRecord, "id">) => void;
   getDocumentsByIds: (ids: string[]) => Document[];
+  loadGoogleSheetsData: () => Promise<void>;
+  syncWithGoogleSheets: () => Promise<void>;
 }
 
 // Sample documents for demonstration
