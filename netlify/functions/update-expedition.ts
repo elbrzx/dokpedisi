@@ -80,27 +80,41 @@ export const handler: Handler = async (event) => {
       ['https://www.googleapis.com/auth/spreadsheets']
     );
 
+    console.log('Created JWT client with email:', SERVICE_ACCOUNT_CREDENTIALS.client_email);
+
     // Create Google Sheets API client
     const sheets = google.sheets({ version: 'v4', auth });
 
+    console.log('Created Google Sheets API client');
+
     // First, find the row with the matching agenda number
+    console.log('Searching for agenda number:', agendaNo, 'in spreadsheet:', SPREADSHEET_ID);
+    
     const searchResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: `${SHEET_NAME}!A:A`, // Search in column A for agenda numbers
     });
 
+    console.log('Search response:', searchResponse.data);
+
     const rows = searchResponse.data.values || [];
+    console.log('Total rows found:', rows.length);
+    console.log('First few rows:', rows.slice(0, 5));
+
     let targetRow = -1;
 
     for (let i = 0; i < rows.length; i++) {
+      console.log(`Row ${i + 1}:`, rows[i][0], 'comparing with:', agendaNo);
       if (rows[i][0] === agendaNo) {
         targetRow = i + 1; // Google Sheets is 1-indexed
+        console.log('Found matching row:', targetRow);
         break;
       }
     }
 
     if (targetRow === -1) {
-      throw new Error(`Agenda number ${agendaNo} not found`);
+      console.log('Available agenda numbers:', rows.map(row => row[0]).slice(0, 10));
+      throw new Error(`Agenda number ${agendaNo} not found in spreadsheet`);
     }
 
     // Get existing expedition history

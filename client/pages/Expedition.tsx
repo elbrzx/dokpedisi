@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Search, X, Save, Trash2 } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
 import { useToast } from "../lib/toastContext";
@@ -105,12 +105,14 @@ const Expedition: React.FC = () => {
     }
   };
 
-  const filteredDocuments = documents.filter(
-    (doc) =>
-      doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              doc.perihal.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredDocuments = useMemo(() => {
+    return documents.filter(
+      (doc) =>
+        doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.perihal.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+  }, [documents, searchTerm]);
 
   // Initialize canvas
   useEffect(() => {

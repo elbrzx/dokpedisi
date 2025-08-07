@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Search, Filter, FileText, Hash, User, RefreshCw, AlertCircle } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
 import { cn } from "../lib/utils";
@@ -25,39 +25,43 @@ const DocumentList: React.FC = () => {
     loadDocumentsFromGoogleSheets();
   }, [loadDocumentsFromGoogleSheets]);
 
-  const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch =
-      doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.perihal.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.currentRecipient?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.expeditionHistory.some((exp) =>
-        exp.recipient.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
+  const filteredDocuments = useMemo(() => {
+    return documents.filter((doc) => {
+      const matchesSearch =
+        doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.perihal.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.currentRecipient?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.expeditionHistory.some((exp) =>
+          exp.recipient.toLowerCase().includes(searchTerm.toLowerCase()),
+        );
 
-    let matchesFilter = true;
+      let matchesFilter = true;
 
-    if (filterType === "status") {
-      matchesFilter = filterValue === "all" || doc.position === filterValue;
-    } else if (filterType === "agenda") {
-      if (filterValue === "all") {
-        matchesFilter = true;
-      } else {
-        matchesFilter =
-          doc.agendaNo.toLowerCase().includes(filterValue.toLowerCase()) ||
-          doc.perihal.toLowerCase().includes(filterValue.toLowerCase());
+      if (filterType === "status") {
+        matchesFilter = filterValue === "all" || doc.position === filterValue;
+      } else if (filterType === "agenda") {
+        if (filterValue === "all") {
+          matchesFilter = true;
+        } else {
+          matchesFilter =
+            doc.agendaNo.toLowerCase().includes(filterValue.toLowerCase()) ||
+            doc.perihal.toLowerCase().includes(filterValue.toLowerCase());
+        }
       }
-    }
 
-    return matchesSearch && matchesFilter;
-  });
+      return matchesSearch && matchesFilter;
+    });
+  }, [documents, searchTerm, filterType, filterValue]);
 
   // Limit to 50 documents to avoid loading issues
-  const limitedDocuments = filteredDocuments.slice(0, 50);
+  const limitedDocuments = useMemo(() => {
+    return filteredDocuments.slice(0, 50);
+  }, [filteredDocuments]);
 
-  const positions = [...new Set(documents.map((doc) => doc.position))];
-  const agendaNumbers = [...new Set(documents.map((doc) => doc.agendaNo))];
-  const perihals = [...new Set(documents.map((doc) => doc.perihal))];
+  const positions = useMemo(() => [...new Set(documents.map((doc) => doc.position))], [documents]);
+  const agendaNumbers = useMemo(() => [...new Set(documents.map((doc) => doc.agendaNo))], [documents]);
+  const perihals = useMemo(() => [...new Set(documents.map((doc) => doc.perihal))], [documents]);
 
   const getPositionColor = (position: string) => {
     switch (position.toLowerCase()) {
@@ -74,20 +78,20 @@ const DocumentList: React.FC = () => {
     }
   };
 
-  const handleDocumentClick = (document: Document) => {
+  const handleDocumentClick = useCallback((document: Document) => {
     setSelectedDocument(document);
     setShowDocumentDetail(true);
-  };
+  }, []);
 
-  const handleCloseDetail = () => {
+  const handleCloseDetail = useCallback(() => {
     setShowDocumentDetail(false);
     setSelectedDocument(null);
-  };
+  }, []);
 
-  const handleFilterTypeChange = (type: "status" | "agenda") => {
+  const handleFilterTypeChange = useCallback((type: "status" | "agenda") => {
     setFilterType(type);
     setFilterValue("all");
-  };
+  }, []);
 
   const getRecipientDisplay = (document: Document) => {
     if (document.expeditionHistory.length === 0) {
