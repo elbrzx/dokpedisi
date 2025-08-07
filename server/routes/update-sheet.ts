@@ -18,8 +18,7 @@ async function getGoogleSheetsClient() {
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
 
-  const client = await auth.getClient();
-  const sheets = google.sheets({ version: "v4", auth: client });
+  const sheets = google.sheets({ version: "v4", auth });
 
   return sheets;
 }
@@ -63,7 +62,7 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
       spreadsheetId: SPREADSHEET_ID,
       range: `${SHEET_NAME}!F${actualRowNumber}:I${actualRowNumber}`,
       valueInputOption: "RAW",
-      resource: {
+      requestBody: {
         values: [[lastExpedition, currentLocation, status, signature || ""]],
       },
     });

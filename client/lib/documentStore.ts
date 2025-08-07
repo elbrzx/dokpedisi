@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import { fetchDocumentsFromGoogleSheets, fetchDocumentsFromGoogleSheetsAPI, GoogleSheetDocument } from "./googleSheetsService";
+import {
+  fetchDocumentsFromGoogleSheets,
+  GoogleSheetDocument,
+} from "./googleSheetsService";
 
 export interface Document {
   id: string;
@@ -19,6 +22,8 @@ export interface Document {
   }>;
   currentRecipient?: string;
   isFromGoogleSheets?: boolean;
+  lastExpedition?: string;
+  signature?: string;
 }
 
 export interface ExpeditionRecord {
@@ -35,17 +40,17 @@ export interface ExpeditionRecord {
 interface DocumentStore {
   documents: Document[];
   expeditions: ExpeditionRecord[];
-  isLoading: boolean;
-  error: string | null;
+  isLoadingGoogleSheets: boolean;
+  googleSheetsError: string | null;
+  lastGoogleSheetsSync: Date | null;
+  totalDocumentsCount: number;
   addDocument: (document: Omit<Document, "id" | "createdAt">) => void;
   updateDocumentPosition: (documentId: string, position: string) => void;
   addExpedition: (expedition: Omit<ExpeditionRecord, "id">) => void;
   getDocumentsByIds: (ids: string[]) => Document[];
-  loadDocumentsFromGoogleSheets: () => Promise<void>;
-  refreshDocuments: () => Promise<void>;
+  loadGoogleSheetsData: () => Promise<void>;
+  refreshData: () => Promise<void>;
 }
-
-
 
 // Empty initial documents - will be populated from Google Sheets
 const initialLocalDocuments: Document[] = [];
@@ -53,8 +58,10 @@ const initialLocalDocuments: Document[] = [];
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
   documents: initialLocalDocuments,
   expeditions: [],
-  isLoading: false,
-  error: null,
+  isLoadingGoogleSheets: false,
+  googleSheetsError: null,
+  lastGoogleSheetsSync: null,
+  totalDocumentsCount: 0,
 
   addDocument: (document) => {
     const newDocument: Document = {
@@ -114,47 +121,42 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     return documents.filter((doc) => ids.includes(doc.id));
   },
 
-  loadDocumentsFromGoogleSheets: async () => {
-    set({ isLoading: true, error: null });
+  loadGoogleSheetsData: async () => {
+    set({ isLoadingGoogleSheets: true, googleSheetsError: null });
     try {
-      // Try API method first, fallback to CSV method
-      let googleSheetsDocuments;
-      try {
-        googleSheetsDocuments = await fetchDocumentsFromGoogleSheetsAPI();
-      } catch (apiError) {
-        console.warn('API method failed, trying CSV method:', apiError);
-        googleSheetsDocuments = await fetchDocumentsFromGoogleSheets();
-      }
-      
-      // Replace all documents with Google Sheets data (no merging with dummy data)
-      set({ documents: googleSheetsDocuments, isLoading: false });
+      const googleSheetsDocuments = await fetchDocumentsFromGoogleSheets();
+      const documents: Document[] = googleSheetsDocuments.map((doc, index) => ({
+        id: `${doc.agendaNumber}-${index}`,
+        agendaNo: doc.agendaNumber,
+        sender: doc.sender,
+        perihal: doc.perihal,
+        position: doc.currentLocation || "Unknown",
+        createdAt: new Date(),
+        expeditionHistory: [],
+        currentRecipient: doc.currentLocation,
+        isFromGoogleSheets: true,
+        lastExpedition: doc.lastExpedition,
+        signature: doc.signature,
+      }));
+      set({
+        documents,
+        isLoadingGoogleSheets: false,
+        totalDocumentsCount: documents.length,
+        lastGoogleSheetsSync: new Date(),
+      });
     } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to load documents from Google Sheets',
-        isLoading: false 
+      set({
+        googleSheetsError:
+          error instanceof Error
+            ? error.message
+            : "Failed to load documents from Google Sheets",
+        isLoadingGoogleSheets: false,
       });
     }
   },
 
-  refreshDocuments: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      // Try API method first, fallback to CSV method
-      let googleSheetsDocuments;
-      try {
-        googleSheetsDocuments = await fetchDocumentsFromGoogleSheetsAPI();
-      } catch (apiError) {
-        console.warn('API method failed, trying CSV method:', apiError);
-        googleSheetsDocuments = await fetchDocumentsFromGoogleSheets();
-      }
-      
-      // Replace all documents with Google Sheets data (no merging)
-      set({ documents: googleSheetsDocuments, isLoading: false });
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to refresh documents from Google Sheets',
-        isLoading: false 
-      });
-    }
+  refreshData: async () => {
+    // This can be simplified to just call the load function again
+    get().loadGoogleSheetsData();
   },
 }));
