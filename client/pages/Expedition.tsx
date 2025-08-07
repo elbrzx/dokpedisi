@@ -10,11 +10,14 @@ import { useNavigationGuard } from "../App";
 
 const isCanvasBlank = (canvas: HTMLCanvasElement | null): boolean => {
   if (!canvas) return true;
-  // A quick check by getting the data URL and comparing it to a blank one
-  const blankCanvas = document.createElement("canvas");
-  blankCanvas.width = canvas.width;
-  blankCanvas.height = canvas.height;
-  return canvas.toDataURL() === blankCanvas.toDataURL();
+  const context = canvas.getContext("2d");
+  if (!context) return true;
+
+  const pixelBuffer = new Uint32Array(
+    context.getImageData(0, 0, canvas.width, canvas.height).data.buffer,
+  );
+
+  return !pixelBuffer.some((pixel) => pixel !== 0);
 };
 
 const Expedition: React.FC = () => {

@@ -18,15 +18,19 @@ const dataUrlToBuffer = (dataUrl: string) => {
 };
 
 export const handleUploadSignature: RequestHandler = async (req, res) => {
+  console.log("Received request to upload signature.");
   const { image } = req.body;
 
-  if (!image) {
+  if (!image || typeof image !== "string") {
+    console.error("Validation Error: Image data is missing or not a string.");
     return res.status(400).json({ message: "Image data is required" });
   }
 
   try {
+    console.log("Converting data URL to buffer...");
     const buffer = dataUrlToBuffer(image);
     const fileName = `signatures/${Date.now()}.png`;
+    console.log(`Buffer created, uploading ${fileName} to Supabase...`);
 
     const { data, error } = await supabase.storage
       .from("signatures") // Assumes a 'signatures' bucket exists
@@ -36,6 +40,7 @@ export const handleUploadSignature: RequestHandler = async (req, res) => {
       });
 
     if (error) {
+      console.error("Supabase upload error:", error);
       throw error;
     }
 

@@ -36,14 +36,34 @@ const DocumentList: React.FC = () => {
     }
   }, [loadGoogleSheetsData, documents.length]);
 
-  const filteredDocuments = documents.filter((doc) => {
-    return (
-      doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.perihal.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.currentRecipient?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  });
+  const [displayedDocuments, setDisplayedDocuments] = useState<Document[]>([]);
+
+  useEffect(() => {
+    // When documents load, set the initial displayed documents to the latest 500
+    if (documents.length > 0) {
+      setDisplayedDocuments(documents.slice(0, 500));
+    }
+  }, [documents]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+
+    if (term.trim() === "") {
+      // If search is cleared, show the initial 500
+      setDisplayedDocuments(documents.slice(0, 500));
+    } else {
+      // If searching, filter the entire list of documents
+      const filtered = documents.filter(
+        (doc) =>
+          doc.agendaNo.toLowerCase().includes(term.toLowerCase()) ||
+          doc.sender.toLowerCase().includes(term.toLowerCase()) ||
+          doc.perihal.toLowerCase().includes(term.toLowerCase()) ||
+          doc.currentRecipient?.toLowerCase().includes(term.toLowerCase()),
+      );
+      setDisplayedDocuments(filtered);
+    }
+  };
 
   const getPositionColor = (position: string) => {
     switch (position.toLowerCase()) {
@@ -86,8 +106,9 @@ const DocumentList: React.FC = () => {
                 Google Sheets Integration
               </p>
               <p className="text-xs text-blue-700">
-                Showing latest {documents.length} of {totalDocumentsCount} total
-                documents (sorted by date, newest first)
+                {searchTerm.trim() === ""
+                  ? `Showing latest ${displayedDocuments.length} of ${totalDocumentsCount} total documents`
+                  : `Found ${displayedDocuments.length} documents matching "${searchTerm}"`}
                 {lastGoogleSheetsSync && (
                   <span className="ml-2">
                     • Last sync: {lastGoogleSheetsSync.toLocaleTimeString()}
@@ -129,16 +150,16 @@ const DocumentList: React.FC = () => {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Search documents, agenda, perihal, or recipients..."
+          placeholder={`Search all ${totalDocumentsCount} documents...`}
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={handleSearchChange}
           className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
         />
       </div>
 
       {/* Document Count */}
       <div className="text-xs text-gray-600">
-        {filteredDocuments.length} of {documents.length} documents displayed
+        {displayedDocuments.length} of {totalDocumentsCount} documents displayed
       </div>
 
       {/* Document List */}
@@ -148,7 +169,7 @@ const DocumentList: React.FC = () => {
             <RefreshCw className="h-8 w-8 mx-auto mb-2 text-gray-400 animate-spin" />
             <p className="text-sm">Loading documents from Google Sheets...</p>
           </div>
-        ) : filteredDocuments.length === 0 ? (
+        ) : displayedDocuments.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <FileText className="h-12 w-12 mx-auto mb-2 text-gray-300" />
             <p className="text-sm">No documents found</p>
@@ -159,7 +180,7 @@ const DocumentList: React.FC = () => {
             )}
           </div>
         ) : (
-          filteredDocuments.map((document) => (
+          displayedDocuments.map((document) => (
             <div
               key={document.id}
               onClick={() => handleDocumentClick(document)}
