@@ -15,6 +15,22 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
 }) => {
   if (!isOpen || !document) return null;
 
+  const parseLastExpedition = (lastExpedition: string | undefined) => {
+    if (!lastExpedition) {
+      return { receivedDate: null, notes: null };
+    }
+
+    const parts = lastExpedition.split(". Catatan: ");
+    const receivedDatePart = parts[0];
+    const notes = parts[1] && parts[1] !== "-" ? parts[1] : null;
+
+    const receivedDate = receivedDatePart.replace("Diterima pada ", "").trim();
+
+    return { receivedDate, notes };
+  };
+
+  const { receivedDate, notes } = parseLastExpedition(document.lastExpedition);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -91,6 +107,19 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
                 <p className="text-xs text-gray-500">Current Location</p>
                 <p className="text-sm font-medium text-blue-800">
                   {document.currentRecipient}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Last Received Date */}
+          {receivedDate && (
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-xs text-gray-500">Last Received</p>
+                <p className="text-sm font-medium text-green-800">
+                  {receivedDate}
                 </p>
               </div>
             </div>
@@ -240,21 +269,35 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
           )}
 
           {/* Signature for documents loaded from sheet */}
-          {document.expeditionHistory.length === 0 && document.signature && (
-            <div className="border-t border-gray-200 pt-4">
-              <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
-                <User className="h-4 w-4 text-purple-600" />
-                Latest Signature
-              </h3>
-              <div className="border border-gray-200 rounded-lg p-2 bg-white">
-                <img
-                  src={document.signature}
-                  alt={`Signature`}
-                  className="max-w-full h-24 object-contain"
-                />
+          {document.expeditionHistory.length === 0 &&
+            (document.signature || notes) && (
+              <div className="border-t border-gray-200 pt-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <User className="h-4 w-4 text-purple-600" />
+                  Latest Expedition Details
+                </h3>
+                {notes && (
+                  <div className="mb-2">
+                    <p className="text-xs text-gray-500 mb-1">Notes</p>
+                    <p className="text-xs text-gray-700 bg-gray-50 p-2 rounded">
+                      {notes}
+                    </p>
+                  </div>
+                )}
+                {document.signature && (
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">Signature</p>
+                    <div className="border border-gray-200 rounded-lg p-2 bg-white">
+                      <img
+                        src={document.signature}
+                        alt={`Signature`}
+                        className="max-w-full h-24 object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )}
         </div>
       </div>
     </div>
