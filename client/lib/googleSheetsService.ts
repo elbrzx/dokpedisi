@@ -1,11 +1,11 @@
 // Enhanced Google Sheets integration service
 export interface GoogleSheetDocument {
   agendaNumber: string; // row [0]
+  createdAt: Date; // row [2]
   sender: string; // row [3]
   perihal: string; // row [4] - subject
   lastExpedition?: string; // row [5]
   currentLocation?: string; // row [6]
-  status?: string; // row [7]
   signature?: string; // row [8]
 }
 
@@ -84,38 +84,48 @@ function convertRowToDocument(
   try {
     // Updated mapping based on requirements:
     // agendaNo = row [0]
-    // sender = row [3]  
+    // createdAt = row [2]
+    // sender = row [3]
     // subject = row [4]
     // lastExpedition = row [5]
     // currentLocation = row [6]
-    // status = row [7]
     // signature = row [8]
-    
+
     const agendaNumber = row[0]?.trim();
+    const dateString = row[2]?.trim();
     const sender = row[3]?.trim();
     const perihal = row[4]?.trim(); // subject
     const lastExpedition = row[5]?.trim() || undefined;
     const currentLocation = row[6]?.trim() || undefined;
-    const status = row[7]?.trim() || "Pending";
     const signature = row[8]?.trim() || undefined;
+
+    // Try to parse the date, fallback to now
+    let createdAt = new Date();
+    if (dateString) {
+      // Handles "MM/DD/YYYY" and other common formats
+      const parsedDate = Date.parse(dateString);
+      if (!isNaN(parsedDate)) {
+        createdAt = new Date(parsedDate);
+      }
+    }
 
     // Only create document if we have the required fields
     if (!agendaNumber || !sender || !perihal) {
       console.log(`Skipping row ${index}: missing required fields`, {
         agendaNumber: !!agendaNumber,
         sender: !!sender,
-        perihal: !!perihal
+        perihal: !!perihal,
       });
       return null;
     }
 
     return {
       agendaNumber,
+      createdAt,
       sender,
       perihal,
       lastExpedition,
       currentLocation,
-      status,
       signature,
     };
   } catch (error) {
@@ -200,7 +210,6 @@ export async function updateSpreadsheetWithExpedition(
   agendaNo: string,
   lastExpedition: string,
   currentLocation: string,
-  status: string,
   signature?: string,
 ): Promise<boolean> {
   try {
@@ -215,7 +224,6 @@ export async function updateSpreadsheetWithExpedition(
         agendaNo,
         lastExpedition,
         currentLocation,
-        status,
         signature,
       }),
     });

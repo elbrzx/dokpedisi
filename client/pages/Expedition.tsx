@@ -11,6 +11,15 @@ import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useNavigationGuard } from "../App";
 
+const isCanvasBlank = (canvas: HTMLCanvasElement | null): boolean => {
+  if (!canvas) return true;
+  // A quick check by getting the data URL and comparing it to a blank one
+  const blankCanvas = document.createElement("canvas");
+  blankCanvas.width = canvas.width;
+  blankCanvas.height = canvas.height;
+  return canvas.toDataURL() === blankCanvas.toDataURL();
+};
+
 const Expedition: React.FC = () => {
   const { documents, addExpedition } = useDocumentStore();
   const { showToast } = useToast();
@@ -202,10 +211,12 @@ const Expedition: React.FC = () => {
     contextRef.current.closePath();
     setIsDrawing(false);
 
-    // Save signature as base64
+    // Save signature as base64 only if it's not blank
     const canvas = canvasRef.current;
-    if (canvas) {
+    if (canvas && !isCanvasBlank(canvas)) {
       setSignature(canvas.toDataURL());
+    } else {
+      setSignature(""); // Ensure signature is empty if canvas is blank
     }
   };
 
@@ -254,14 +265,15 @@ const Expedition: React.FC = () => {
         }
 
         // Construct expedition details from form data
-        const expeditionDetails = `Dikirim ke ${recipient.trim()} pada ${date} jam ${time}. Catatan: ${notes.trim() || "-"}`;
+        const expeditionDetails = `Diterima pada ${date} jam ${time}. Catatan: ${
+          notes.trim() || "-"
+        }`;
 
         // Update expedition data in Google Sheets
         const success = await updateSpreadsheetWithExpedition(
           document.agendaNo,
           expeditionDetails, // lastExpedition
           recipient.trim(), // currentLocation
-          "Terkirim", // status
           processedSignature,
         );
 

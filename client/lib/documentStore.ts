@@ -132,7 +132,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         sender: doc.sender,
         perihal: doc.perihal,
         position: doc.currentLocation || "Unknown",
-        createdAt: new Date(),
+        createdAt: doc.createdAt,
         expeditionHistory: [],
         currentRecipient: doc.currentLocation,
         isFromGoogleSheets: true,
