@@ -1,327 +1,251 @@
-import { Document } from './documentStore';
-import { GOOGLE_SHEETS_CONFIG, API_ENDPOINTS } from '../../config/google-sheets.config';
-
-// Google Sheets integration service
+// Enhanced Google Sheets integration service
 export interface GoogleSheetDocument {
-  agendaNumber: string;
-  sender: string;
-  perihal: string; // Subject renamed to Perihal
+  agendaNumber: string; // row [0]
+  sender: string; // row [3]
+  perihal: string; // row [4] - subject
+  lastExpedition?: string; // row [5]
+  currentLocation?: string; // row [6]
+  status?: string; // row [7]
+  signature?: string; // row [8]
 }
 
 export interface GoogleSheetsConfig {
   spreadsheetId: string;
   sheetName: string;
-  ranges: {
-    agendaNumber: string; // A2:A
-    sender: string;       // D2:E  
-    perihal: string;      // E2:G
-  };
 }
 
 // Configuration for the provided Google Sheet
 const SHEET_CONFIG: GoogleSheetsConfig = {
-  spreadsheetId: GOOGLE_SHEETS_CONFIG.SPREADSHEET_ID,
-  sheetName: GOOGLE_SHEETS_CONFIG.SHEET_NAME,
-  ranges: {
-    agendaNumber: 'A2:A',
-    sender: 'D2:E',
-    perihal: 'E2:G'
-  }
+  spreadsheetId: "19FgFYyhgnMmWIVIHK-1cOmgrQIik_j4mqUnLz5aArR4",
+  sheetName: "SURATMASUK",
 };
 
-// Service account credentials (for reference only - not used in client-side)
-const SERVICE_ACCOUNT_CREDENTIALS = GOOGLE_SHEETS_CONFIG.SERVICE_ACCOUNT;
-
-// Parse CSV data
+// Parse CSV data with better handling
 function parseCSV(csvText: string): string[][] {
-  const lines = csvText.split('\n');
-  return lines.map(line => {
+  const lines = csvText.split("\n");
+  return lines.map((line) => {
     const cells = [];
-    let current = '';
+    let current = "";
     let inQuotes = false;
-    
+
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
       if (char === '"') {
         inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        cells.push(current.trim());
-        current = '';
+      } else if (char === "," && !inQuotes) {
+        cells.push(current.trim().replace(/^"|"$/g, ""));
+        current = "";
       } else {
         current += char;
       }
     }
-    cells.push(current.trim());
+    cells.push(current.trim().replace(/^"|"$/g, ""));
     return cells;
   });
 }
 
-// Fetch data from a specific range in Google Sheets
-async function fetchSheetRange(spreadsheetId: string, sheetName: string, range: string): Promise<string[]> {
+// Fetch all sheet data at once
+async function fetchEntireSheet(
+  spreadsheetId: string,
+  sheetName: string,
+): Promise<string[][]> {
   try {
-    // Use Google Sheets CSV export URL for public sheets
-    const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&range=${encodeURIComponent(range)}`;
-    
+    // Use Google Sheets CSV export URL for the entire sheet
+    const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+
+    console.log("Fetching from URL:", url);
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to fetch sheet data: ${response.statusText}`);
     }
-    
-    const csvText = await response.text();
-    const rows = parseCSV(csvText);
-    
-    // Extract values, filter out empty rows
-    return rows
-      .map(row => row[0] || '')
-      .filter(value => value.trim() !== '');
-  } catch (error) {
-    console.error(`Error fetching range ${range}:`, error);
-    return [];
-  }
-}
-
-// Fetch all document data from Google Sheets using CSV export
-export async function fetchDocumentsFromGoogleSheets(): Promise<Document[]> {
-  try {
-    console.log('Fetching documents from Google Sheets...');
-    
-    // Using public CSV export method for simplicity
-    const csvUrl = API_ENDPOINTS.CSV_EXPORT(SHEET_CONFIG.spreadsheetId, SHEET_CONFIG.sheetName);
-    
-    const response = await fetch(csvUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch data: ${response.statusText}`);
-    }
 
     const csvText = await response.text();
     const rows = parseCSV(csvText);
-    
-    // Skip header row and map data according to specifications
-    const documents: Document[] = rows.slice(1).map((row, index) => {
-      const agendaNo = row[0] || `AGENDA-${String(index + 1).padStart(3, '0')}`; // Column A
-      const sender = row[3] || 'Unknown Sender'; // Column D
-      const perihal = row[4] || 'No Perihal'; // Column E
-      const lastExpedition = row[5] || ''; // Column F
-      const currentLocation = row[6] || ''; // Column G
-      const status = row[7] || 'Pending'; // Column H
-      const signature = row[8] || ''; // Column I
-      
-      // Parse expedition history from last expedition data
-      let expeditionHistory = [];
-      if (lastExpedition) {
-        try {
-          const expeditionData = JSON.parse(lastExpedition);
-          expeditionHistory = Array.isArray(expeditionData) ? expeditionData : [];
-        } catch (e) {
-          // If parsing fails, create a simple expedition entry
-          expeditionHistory = [{
-            id: `exp-${Date.now()}-${index}`,
-            date: new Date(),
-            time: new Date().toLocaleTimeString(),
-            recipient: currentLocation,
-            order: 1,
-            notes: lastExpedition
-          }];
-        }
-      }
-      
-      return {
-        id: `gs-${index + 1}`,
-        agendaNo: agendaNo,
-        sender: sender,
-        perihal: perihal,
-        position: status,
-        createdAt: new Date(),
-        expeditionHistory: expeditionHistory,
-        currentRecipient: currentLocation,
-        isFromGoogleSheets: true,
-      };
+
+    console.log("Raw CSV rows:", rows.length);
+
+    // Filter out completely empty rows and header row
+    return rows.filter((row, index) => {
+      if (index === 0) return false; // Skip header row
+      return row.some((cell) => cell && cell.trim() !== "");
     });
-
-    console.log('Processed documents:', documents);
-    return documents;
   } catch (error) {
-    console.error('Error fetching documents from Google Sheets:', error);
+    console.error("Error fetching sheet data:", error);
     return [];
   }
 }
 
-// Alternative method using Google Sheets API v4 (requires server-side implementation)
-export async function fetchDocumentsFromGoogleSheetsAPI(): Promise<Document[]> {
+// Convert row data to document format based on updated mapping
+function convertRowToDocument(
+  row: string[],
+  index: number,
+): GoogleSheetDocument | null {
   try {
-    // Using Netlify Function endpoint
-    const response = await fetch(API_ENDPOINTS.GOOGLE_SHEETS);
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
-    }
+    // Updated mapping based on requirements:
+    // agendaNo = row [0]
+    // sender = row [3]  
+    // subject = row [4]
+    // lastExpedition = row [5]
+    // currentLocation = row [6]
+    // status = row [7]
+    // signature = row [8]
     
-    const data = await response.json();
-    if (data.success) {
-      return data.documents.map((doc: any) => ({
-        ...doc,
-        createdAt: new Date(doc.createdAt),
-        isFromGoogleSheets: true,
-      }));
-    } else {
-      throw new Error(data.error || 'Failed to fetch documents');
+    const agendaNumber = row[0]?.trim();
+    const sender = row[3]?.trim();
+    const perihal = row[4]?.trim(); // subject
+    const lastExpedition = row[5]?.trim() || undefined;
+    const currentLocation = row[6]?.trim() || undefined;
+    const status = row[7]?.trim() || "Pending";
+    const signature = row[8]?.trim() || undefined;
+
+    // Only create document if we have the required fields
+    if (!agendaNumber || !sender || !perihal) {
+      console.log(`Skipping row ${index}: missing required fields`, {
+        agendaNumber: !!agendaNumber,
+        sender: !!sender,
+        perihal: !!perihal
+      });
+      return null;
     }
+
+    return {
+      agendaNumber,
+      sender,
+      perihal,
+      lastExpedition,
+      currentLocation,
+      status,
+      signature,
+    };
   } catch (error) {
-    console.error('Error fetching documents from Google Sheets API:', error);
-    return [];
+    console.error(`Error converting row ${index}:`, error);
+    return null;
   }
 }
 
-// Alternative method using Google Sheets API (requires API key)
-export async function fetchDocumentsWithAPI(apiKey: string): Promise<GoogleSheetDocument[]> {
+// Fetch all document data from Google Sheets
+export async function fetchDocumentsFromGoogleSheets(): Promise<
+  GoogleSheetDocument[]
+> {
   try {
-    const { spreadsheetId, sheetName, ranges } = SHEET_CONFIG;
-    
-    // Construct ranges for batch request
-    const rangeQueries = [
-      `${sheetName}!${ranges.agendaNumber}`,
-      `${sheetName}!${ranges.sender}`,
-      `${sheetName}!${ranges.perihal}`
-    ];
-    
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=${rangeQueries.join('&ranges=')}&key=${apiKey}`;
-    
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Google Sheets API error: ${response.statusText}`);
+    console.log("Fetching documents from Google Sheets...");
+
+    const rows = await fetchEntireSheet(
+      SHEET_CONFIG.spreadsheetId,
+      SHEET_CONFIG.sheetName,
+    );
+
+    if (rows.length === 0) {
+      console.warn("No data rows found in sheet");
+      return [];
     }
-    
-    const data = await response.json();
-    const valueRanges = data.valueRanges;
-    
-    if (!valueRanges || valueRanges.length < 3) {
-      throw new Error('Insufficient data from Google Sheets API');
-    }
-    
-    const agendaNumbers = valueRanges[0].values?.flat() || [];
-    const senders = valueRanges[1].values?.flat() || [];
-    const perihals = valueRanges[2].values?.flat() || [];
-    
-    const maxLength = Math.min(agendaNumbers.length, senders.length, perihals.length);
+
+    console.log(`Processing ${rows.length} rows from sheet`);
+
     const documents: GoogleSheetDocument[] = [];
-    
-    for (let i = 0; i < maxLength; i++) {
-      const agendaNumber = agendaNumbers[i]?.trim();
-      const sender = senders[i]?.trim();
-      const perihal = perihals[i]?.trim();
-      
-      if (agendaNumber && sender && perihal) {
-        documents.push({
-          agendaNumber,
-          sender,
-          perihal
-        });
+
+    for (let i = 0; i < rows.length; i++) {
+      const doc = convertRowToDocument(rows[i], i);
+      if (doc) {
+        documents.push(doc);
       }
     }
-    
+
+    console.log(`Successfully processed ${documents.length} documents from ${rows.length} rows`);
     return documents;
   } catch (error) {
-    console.error('Error fetching documents with Google Sheets API:', error);
+    console.error("Error fetching documents from Google Sheets:", error);
     return [];
   }
 }
 
-// Function to update expedition data in Google Sheets
-export async function updateExpeditionData(
-  agendaNo: string,
-  expeditionData: {
-    date: Date;
-    time: string;
-    recipient: string;
-    notes?: string;
-    signature?: string;
+// Convert signature canvas data to low-resolution JPEG
+export function convertSignatureToLowResJPEG(signatureDataUrl: string): string {
+  try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Set low resolution for smaller file size
+    canvas.width = 200;
+    canvas.height = 100;
+
+    const img = new Image();
+    img.onload = () => {
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      }
+    };
+    img.src = signatureDataUrl;
+
+    // Convert to JPEG with low quality for smaller size
+    return canvas.toDataURL("image/jpeg", 0.3);
+  } catch (error) {
+    console.error("Error converting signature to low-res JPEG:", error);
+    return signatureDataUrl;
   }
+}
+
+// Update spreadsheet with expedition data by calling the backend endpoint
+export async function updateSpreadsheetWithExpedition(
+  agendaNo: string,
+  lastExpedition: string,
+  currentLocation: string,
+  status: string,
+  signature?: string,
 ): Promise<boolean> {
   try {
-    console.log('Updating expedition data for agenda:', agendaNo);
-    
-    // Convert signature to base64 if provided
-    let signatureBase64 = '';
-    if (expeditionData.signature) {
-      // Convert data URL to base64
-      const base64Data = expeditionData.signature.split(',')[1];
-      signatureBase64 = base64Data || '';
-    }
-    
-    // Prepare expedition history data
-    const expeditionEntry = {
-      id: `exp-${Date.now()}`,
-      date: expeditionData.date.toISOString(),
-      time: expeditionData.time,
-      recipient: expeditionData.recipient,
-      notes: expeditionData.notes || '',
-      order: 1, // This will be calculated based on existing expeditions
-    };
-    
-    console.log('Sending expedition data:', {
-      agendaNo,
-      expeditionData: expeditionEntry,
-      currentLocation: expeditionData.recipient,
-      status: 'Accepted',
-      signature: signatureBase64 ? 'base64_data_present' : 'no_signature',
-    });
-    
-    // Use Netlify Function to update Google Sheets
-    const response = await fetch('/.netlify/functions/update-expedition', {
-      method: 'POST',
+    console.log(`Updating spreadsheet for agenda ${agendaNo} via backend`);
+
+    const response = await fetch("/api/update-sheet", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         agendaNo,
-        expeditionData: expeditionEntry,
-        currentLocation: expeditionData.recipient,
-        status: 'Accepted',
-        signature: signatureBase64,
+        lastExpedition,
+        currentLocation,
+        status,
+        signature,
       }),
     });
-    
-    console.log('Response status:', response.status);
-    
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Response error:', errorText);
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
+      const errorData = await response.json();
+      throw new Error(
+        `Failed to update spreadsheet: ${errorData.message || response.statusText}`,
+      );
     }
-    
+
     const result = await response.json();
-    console.log('Update result:', result);
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Unknown error from server');
-    }
-    
+    console.log("Spreadsheet updated successfully:", result);
     return true;
   } catch (error) {
-    console.error('Error updating expedition data for agenda', agendaNo, ':', error);
+    console.error("Error updating spreadsheet:", error);
     return false;
   }
 }
 
-// Function to convert signature to low-res JPG
-export function convertSignatureToLowResJPG(signatureDataUrl: string): Promise<string> {
-  return new Promise((resolve) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    
-    img.onload = () => {
-      // Set canvas size for low resolution (e.g., 200x100)
-      canvas.width = 200;
-      canvas.height = 100;
-      
-      // Draw image with low quality
-      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      
-      // Convert to low quality JPG
-      const lowResJPG = canvas.toDataURL('image/jpeg', 0.3); // 30% quality
-      resolve(lowResJPG);
+// Get sheet statistics
+export async function getSheetStats(): Promise<{
+  totalRows: number;
+  lastUpdate: Date;
+}> {
+  try {
+    const rows = await fetchEntireSheet(
+      SHEET_CONFIG.spreadsheetId,
+      SHEET_CONFIG.sheetName,
+    );
+    return {
+      totalRows: rows.length,
+      lastUpdate: new Date(),
     };
-    
-    img.src = signatureDataUrl;
-  });
+  } catch (error) {
+    console.error("Error getting sheet stats:", error);
+    return {
+      totalRows: 0,
+      lastUpdate: new Date(),
+    };
+  }
 }

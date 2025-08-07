@@ -1,67 +1,49 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Search, Filter, FileText, Hash, User, RefreshCw, AlertCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  Search,
+  FileText,
+  User,
+  RefreshCw,
+  AlertCircle,
+  Database,
+  Calendar,
+} from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
 import { cn } from "../lib/utils";
 import DocumentDetail from "../components/DocumentDetail";
 
 const DocumentList: React.FC = () => {
-  const { 
-    documents, 
-    isLoading, 
-    error, 
-    loadDocumentsFromGoogleSheets, 
-    refreshDocuments 
+  const {
+    documents,
+    isLoadingGoogleSheets,
+    googleSheetsError,
+    lastGoogleSheetsSync,
+    totalDocumentsCount,
+    loadGoogleSheetsData,
+    refreshData,
   } = useDocumentStore();
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState<"status" | "agenda">("status");
-  const [filterValue, setFilterValue] = useState<string>("all");
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(
     null,
   );
   const [showDocumentDetail, setShowDocumentDetail] = useState(false);
 
-  // Load documents from Google Sheets on component mount
+  // Load Google Sheets data on component mount
   useEffect(() => {
-    loadDocumentsFromGoogleSheets();
-  }, [loadDocumentsFromGoogleSheets]);
+    if (documents.length === 0) {
+      loadGoogleSheetsData();
+    }
+  }, [loadGoogleSheetsData, documents.length]);
 
-  const filteredDocuments = useMemo(() => {
-    return documents.filter((doc) => {
-      const matchesSearch =
-        doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.perihal.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.currentRecipient?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.expeditionHistory.some((exp) =>
-          exp.recipient.toLowerCase().includes(searchTerm.toLowerCase()),
-        );
-
-      let matchesFilter = true;
-
-      if (filterType === "status") {
-        matchesFilter = filterValue === "all" || doc.position === filterValue;
-      } else if (filterType === "agenda") {
-        if (filterValue === "all") {
-          matchesFilter = true;
-        } else {
-          matchesFilter =
-            doc.agendaNo.toLowerCase().includes(filterValue.toLowerCase()) ||
-            doc.perihal.toLowerCase().includes(filterValue.toLowerCase());
-        }
-      }
-
-      return matchesSearch && matchesFilter;
-    });
-  }, [documents, searchTerm, filterType, filterValue]);
-
-  // Limit to 50 documents to avoid loading issues
-  const limitedDocuments = useMemo(() => {
-    return filteredDocuments.slice(0, 50);
-  }, [filteredDocuments]);
-
-  const positions = useMemo(() => [...new Set(documents.map((doc) => doc.position))], [documents]);
-  const agendaNumbers = useMemo(() => [...new Set(documents.map((doc) => doc.agendaNo))], [documents]);
-  const perihals = useMemo(() => [...new Set(documents.map((doc) => doc.perihal))], [documents]);
+  const filteredDocuments = documents.filter((doc) => {
+    return (
+      doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.perihal.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.currentRecipient?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   const getPositionColor = (position: string) => {
     switch (position.toLowerCase()) {
@@ -78,238 +60,183 @@ const DocumentList: React.FC = () => {
     }
   };
 
-  const handleDocumentClick = useCallback((document: Document) => {
+  const handleDocumentClick = (document: Document) => {
     setSelectedDocument(document);
     setShowDocumentDetail(true);
-  }, []);
+  };
 
-  const handleCloseDetail = useCallback(() => {
+  const handleCloseDetail = () => {
     setShowDocumentDetail(false);
     setSelectedDocument(null);
-  }, []);
+  };
 
-  const handleFilterTypeChange = useCallback((type: "status" | "agenda") => {
-    setFilterType(type);
-    setFilterValue("all");
-  }, []);
-
-  const getRecipientDisplay = (document: Document) => {
-    if (document.expeditionHistory.length === 0) {
-      return null;
-    }
-
-    const recipients = document.expeditionHistory.map((exp) => exp.recipient);
-    const uniqueRecipients = [...new Set(recipients)];
-
-    if (uniqueRecipients.length === 1) {
-      return `Recipient: ${uniqueRecipients[0]}`;
-    } else {
-      return `Recipients: ${uniqueRecipients.slice(0, 2).join(", ")}${uniqueRecipients.length > 2 ? ` +${uniqueRecipients.length - 2} more` : ""}`;
-    }
+  const handleRefresh = async () => {
+    await refreshData();
   };
 
   return (
     <div className="p-4 space-y-4">
-      {/* Header with refresh button */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Daftar Dokumen</h1>
-        <button
-          onClick={refreshDocuments}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
-      </div>
-
-      {/* Error message */}
-      {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <AlertCircle className="h-4 w-4 text-red-500" />
-          <span className="text-sm text-red-700">{error}</span>
-        </div>
-      )}
-
-      {/* Loading indicator */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin text-orange-500" />
-          <span className="ml-2 text-sm text-gray-600">Loading documents from Google Sheets...</span>
-        </div>
-      )}
-
-      {/* Empty state when no documents */}
-      {!isLoading && documents.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          <FileText className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-          <p className="text-sm">No documents found</p>
-          <p className="text-xs mt-1">Try refreshing to load data from Google Sheets</p>
-        </div>
-      )}
-
-      {/* Search and Filter Controls - Always visible */}
-      <div className="space-y-3">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search documents, No Agenda, Perihal, or recipients..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          />
-        </div>
-
-        {/* Filter Type Selector */}
-        <div className="flex gap-2">
+      {/* Google Sheets Status */}
+      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-blue-600" />
+            <div>
+              <p className="text-sm font-medium text-blue-900">
+                Google Sheets Integration
+              </p>
+              <p className="text-xs text-blue-700">
+                Showing latest 50 of {totalDocumentsCount} total documents (sorted by date, newest first)
+                {lastGoogleSheetsSync && (
+                  <span className="ml-2">
+                    • Last sync: {lastGoogleSheetsSync.toLocaleTimeString()}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
           <button
-            onClick={() => handleFilterTypeChange("status")}
+            onClick={handleRefresh}
+            disabled={isLoadingGoogleSheets}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
-              filterType === "status"
-                ? "bg-orange-100 text-orange-800 border border-orange-200"
-                : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200",
+              "flex items-center gap-2 px-3 py-1 rounded text-xs font-medium transition-colors",
+              isLoadingGoogleSheets
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-blue-100 text-blue-700 hover:bg-blue-200",
             )}
           >
-            <User className="h-4 w-4" />
-            Filter by Status
+            <RefreshCw
+              className={cn("h-3 w-3", isLoadingGoogleSheets && "animate-spin")}
+            />
+            {isLoadingGoogleSheets ? "Syncing..." : "Refresh"}
           </button>
         </div>
       </div>
 
-      {/* Filter Options */}
-      {!isLoading && documents.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-gray-500" />
-          {filterType === "status" ? (
-            <select
-              value={filterValue}
-              onChange={(e) => setFilterValue(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            >
-              <option value="all">All Statuses</option>
-              {positions.map((position) => (
-                <option key={position} value={position}>
-                  {position}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <select
-              value={filterValue}
-              onChange={(e) => setFilterValue(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            >
-              <option value="all">All Documents</option>
-              <optgroup label="Agenda Numbers">
-                {agendaNumbers.map((agenda) => (
-                  <option key={`agenda-${agenda}`} value={agenda}>
-                    {agenda}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Perihal">
-                {perihals.map((perihal) => (
-                  <option key={`perihal-${perihal}`} value={perihal}>
-                    {perihal.length > 30
-                      ? `${perihal.substring(0, 30)}...`
-                      : perihal}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          )}
+      {/* Error Message */}
+      {googleSheetsError && (
+        <div className="bg-red-50 rounded-lg p-3 border border-red-200">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <p className="text-sm text-red-800">{googleSheetsError}</p>
+          </div>
         </div>
       )}
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search documents, agenda, perihal, or recipients..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+        />
+      </div>
 
       {/* Document Count */}
-      {!isLoading && documents.length > 0 && (
-        <div className="text-xs text-gray-600">
-          Showing {limitedDocuments.length} of {filteredDocuments.length} documents
-          {filteredDocuments.length > 50 && (
-            <span className="ml-2 text-orange-600">
-              • Limited to 50 for performance
-            </span>
-          )}
-          {filterType === "agenda" && filterValue !== "all" && (
-            <span className="ml-2 text-orange-600">
-              • Filtered by: {filterValue}
-            </span>
-          )}
-        </div>
-      )}
+      <div className="text-xs text-gray-600">
+        {filteredDocuments.length} of {documents.length} documents displayed
+      </div>
 
       {/* Document List */}
-      {!isLoading && documents.length > 0 && (
-        <div className="space-y-2">
-          {limitedDocuments.map((document) => (
+      <div className="space-y-2">
+        {isLoadingGoogleSheets ? (
+          <div className="text-center py-8 text-gray-500">
+            <RefreshCw className="h-8 w-8 mx-auto mb-2 text-gray-400 animate-spin" />
+            <p className="text-sm">Loading documents from Google Sheets...</p>
+          </div>
+        ) : filteredDocuments.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <FileText className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+            <p className="text-sm">No documents found</p>
+            {documents.length === 0 && (
+              <p className="text-xs mt-1">
+                Check your Google Sheets connection
+              </p>
+            )}
+          </div>
+        ) : (
+          filteredDocuments.map((document) => (
             <div
               key={document.id}
               onClick={() => handleDocumentClick(document)}
-              className="bg-white rounded-lg border border-gray-200 p-3 space-y-2 cursor-pointer hover:bg-gray-50 transition-colors"
+              className="bg-white rounded-lg border border-gray-200 p-4 space-y-3 cursor-pointer hover:bg-gray-50 transition-colors"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-medium text-orange-600">
-                      No: {document.agendaNo}
-                    </span>
-                    <span
-                      className={cn(
-                        "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
-                        getPositionColor(document.position),
-                      )}
-                    >
-                      {document.position}
-                    </span>
-                    {document.expeditionHistory.length > 0 && (
-                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                        {document.expeditionHistory.length} expedition
-                        {document.expeditionHistory.length > 1 ? "s" : ""}
-                      </span>
+              {/* Header with Agenda and Status */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                    {document.agendaNo}
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
+                      getPositionColor(document.position),
                     )}
-                  </div>
-                  <h3 className="text-sm font-medium text-gray-900 truncate">
-                    Perihal: {document.perihal}
-                  </h3>
-                  <p className="text-xs text-gray-600 mt-1">
-                    From: {document.sender}
-                  </p>
-                  {getRecipientDisplay(document) && (
-                    <p className="text-xs text-green-600 mt-1">
-                      {getRecipientDisplay(document)}
-                    </p>
+                  >
+                    {document.position}
+                  </span>
+                  {document.expeditionHistory.length > 0 && (
+                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                      {document.expeditionHistory.length} expedition
+                      {document.expeditionHistory.length > 1 ? "s" : ""}
+                    </span>
                   )}
+                </div>
+                <div className="text-xs text-gray-500 flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {new Intl.DateTimeFormat("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  }).format(document.createdAt)}
                 </div>
               </div>
 
-              <div className="text-xs text-gray-500">
-                Created:{" "}
-                {new Intl.DateTimeFormat("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                }).format(document.createdAt)}
-                {document.expeditionHistory.length > 0 && (
-                  <span className="ml-2">
-                    • Last expedition:{" "}
-                    {new Intl.DateTimeFormat("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    }).format(
-                      document.expeditionHistory[
-                        document.expeditionHistory.length - 1
-                      ].date,
-                    )}
-                  </span>
+              {/* Document Details */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-900 leading-tight">
+                  {document.perihal}
+                </h3>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-gray-500">From:</span>
+                    <span className="ml-1 text-gray-900 font-medium block">
+                      {document.sender}
+                    </span>
+                  </div>
+                  {document.currentRecipient && (
+                    <div>
+                      <span className="text-gray-500">Current Location:</span>
+                      <span className="ml-1 text-green-700 font-medium block">
+                        {document.currentRecipient}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {document.lastExpedition && (
+                  <div className="text-xs">
+                    <span className="text-gray-500">Last Expedition:</span>
+                    <span className="ml-1 text-gray-700">
+                      {document.lastExpedition}
+                    </span>
+                  </div>
                 )}
               </div>
+
+              {/* Signature indicator */}
+              {document.signature && (
+                <div className="flex items-center gap-1 text-xs text-purple-600">
+                  <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                  <span>Signed</span>
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
       <DocumentDetail
         document={selectedDocument}

@@ -2,13 +2,14 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import { handleUpdateSheet } from "./routes/update-sheet";
 
 export function createServer() {
   const app = express();
 
   // Middleware
   app.use(cors());
-  app.use(express.json());
+  app.use(express.json({ limit: "5mb" })); // Increase limit for signatures
   app.use(express.urlencoded({ extended: true }));
 
   // Example API routes
@@ -18,6 +19,9 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+
+  // Google Sheets update route
+  app.post("/api/update-sheet", handleUpdateSheet);
 
   return app;
 }
