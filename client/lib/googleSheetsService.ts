@@ -7,6 +7,7 @@ export interface GoogleSheetDocument {
   lastExpedition?: string; // row [5]
   currentLocation?: string; // row [6]
   signature?: string; // row [8]
+  expeditionHistory?: string; // row [9]
 }
 
 export interface GoogleSheetsConfig {
@@ -90,6 +91,7 @@ function convertRowToDocument(
     // lastExpedition = row [5]
     // currentLocation = row [6]
     // signature = row [8]
+    // expeditionHistory = row [9]
 
     const agendaNumber = row[0]?.trim();
     const dateString = row[2]?.trim();
@@ -98,20 +100,40 @@ function convertRowToDocument(
     const lastExpedition = row[5]?.trim() || undefined;
     const currentLocation = row[6]?.trim() || undefined;
     const signature = row[8]?.trim() || undefined;
+    const expeditionHistory = row[9]?.trim() || undefined;
 
-    // Robust date parsing for "DD-MM-YYYY" or "MM/DD/YYYY"
+    // Robust date parsing for DD-MMM-YYYY (e.g., 01-Jan-2024) and other formats
     let createdAt = new Date(); // Fallback
     if (dateString) {
-      const parts = dateString.split(/[\/\-]/);
+      const monthMap: { [key: string]: number } = {
+        jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, jun: 5,
+        jul: 6, agu: 7, sep: 8, okt: 9, nov: 10, des: 11,
+      };
+
+      const parts = dateString.replace(/\s+/g, "").split(/[\/\-]/);
       if (parts.length === 3) {
-        // Assuming MM/DD/YYYY or DD-MM-YYYY. Let's try MM/DD/YYYY first as it's more common with Date.parse
-        let parsedDate = Date.parse(`${parts[0]}/${parts[1]}/${parts[2]}`);
-        if (isNaN(parsedDate)) {
-          // if that fails, try DD/MM/YYYY
-          parsedDate = Date.parse(`${parts[1]}/${parts[0]}/${parts[2]}`);
+        const day = parseInt(parts[0], 10);
+        const year = parseInt(parts[2], 10);
+        let month = -1;
+
+        const monthStr = parts[1].toLowerCase().substring(0, 3);
+        if (monthMap[monthStr] !== undefined) {
+          // Handle MMM month format (e.g., Jan, Agu)
+          month = monthMap[monthStr];
+        } else {
+          // Handle MM month format (e.g., 01, 12)
+          month = parseInt(parts[1], 10) - 1;
         }
-        if (!isNaN(parsedDate)) {
-          createdAt = new Date(parsedDate);
+
+        if (!isNaN(day) && !isNaN(year) && month > -1 && year > 1900) {
+          // Check for valid year to avoid mix-ups
+           createdAt = new Date(Date.UTC(year, month, day));
+        } else {
+          // Fallback for other formats like MM/DD/YYYY that Date.parse understands
+          const parsedDate = Date.parse(dateString);
+          if (!isNaN(parsedDate)) {
+            createdAt = new Date(parsedDate);
+          }
         }
       }
     }
@@ -134,6 +156,7 @@ function convertRowToDocument(
       lastExpedition,
       currentLocation,
       signature,
+      expeditionHistory,
     };
   } catch (error) {
     console.error(`Error converting row ${index}:`, error);
@@ -183,29 +206,41 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<{
 }
 
 // Convert signature canvas data to low-resolution JPEG
-export function convertSignatureToLowResJPEG(signatureDataUrl: string): string {
-  try {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+export function convertSignatureToLowResJPEG(
+  signatureDataUrl: string,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
 
-    // Set low resolution for smaller file size
-    canvas.width = 200;
-    canvas.height = 100;
-
-    const img = new Image();
-    img.onload = () => {
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      if (!ctx) {
+        return reject(new Error("Could not get canvas context"));
       }
-    };
-    img.src = signatureDataUrl;
 
-    // Convert to JPEG with low quality for smaller size
-    return canvas.toDataURL("image/jpeg", 0.3);
-  } catch (error) {
-    console.error("Error converting signature to low-res JPEG:", error);
-    return signatureDataUrl;
-  }
+      // Set low resolution for smaller file size
+      canvas.width = 200;
+      canvas.height = 100;
+
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // Convert to JPEG with low quality for smaller size
+        const lowResDataUrl = canvas.toDataURL("image/jpeg", 0.3);
+        resolve(lowResDataUrl);
+      };
+      img.onerror = (error) => {
+        console.error("Error loading signature image for conversion:", error);
+        // Fallback to original high-res image on error
+        resolve(signatureDataUrl);
+      };
+      img.src = signatureDataUrl;
+    } catch (error) {
+      console.error("Error converting signature to low-res JPEG:", error);
+      // Fallback to original high-res image on error
+      resolve(signatureDataUrl);
+    }
+  });
 }
 
 // Update spreadsheet with expedition data by calling the backend endpoint

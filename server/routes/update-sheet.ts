@@ -35,10 +35,10 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
   try {
     const sheets = await getGoogleSheetsClient();
 
-    // 1. Find the row with the matching agenda number
+    // 1. Find the row with the matching agenda number, fetching all columns up to J
     const findResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:A`,
+      range: `${SHEET_NAME}!A:J`, // Read up to column J for history
     });
 
     const rows = findResponse.data.values;
@@ -47,7 +47,7 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
     }
 
     const rowIndex = rows.findIndex(
-      (row, index) => index > 0 && row[0] === agendaNo
+      (row, index) => index > 0 && row[0] === agendaNo, // index > 0 to skip header
     );
 
     if (rowIndex === -1) {
@@ -56,15 +56,49 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
         .json({ message: `Agenda number ${agendaNo} not found` });
     }
 
-    const actualRowNumber = rowIndex + 1; // +1 because sheets are 1-indexed and we skip header
+    const actualRowNumber = rowIndex + 1; // +1 because sheets are 1-indexed
 
-    // 2. Update the specific row
+    // 2. Get existing history and append new record
+    const currentRow = rows[rowIndex];
+    const historyJson = currentRow[9] || "[]"; // History is in column J (index 9)
+    let history: any[] = [];
+
+    try {
+      history = JSON.parse(historyJson);
+      if (!Array.isArray(history)) {
+        console.warn("History data was not an array, resetting.");
+        history = [];
+      }
+    } catch (e) {
+      console.warn("Invalid JSON in history column, resetting.", e);
+      history = [];
+    }
+
+    const newHistoryEntry = {
+      recipient: currentLocation,
+      details: lastExpedition,
+      status: status,
+      signature: signature || "",
+      timestamp: new Date().toISOString(),
+    };
+    history.push(newHistoryEntry);
+    const newHistoryJson = JSON.stringify(history);
+
+    // 3. Update the specific row with new expedition data AND history
     const updateResponse = await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!F${actualRowNumber}:I${actualRowNumber}`,
+      range: `${SHEET_NAME}!F${actualRowNumber}:J${actualRowNumber}`, // Update range to include history
       valueInputOption: "RAW",
       requestBody: {
-        values: [[lastExpedition, currentLocation, status, signature || ""]],
+        values: [
+          [
+            lastExpedition,
+            currentLocation,
+            status,
+            signature || "",
+            newHistoryJson, // Add the updated history
+          ],
+        ],
       },
     });
 
@@ -75,9 +109,15 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
   } catch (error: any) {
     console.error("Full error object:", JSON.stringify(error, null, 2));
     if (error instanceof Error) {
-        res.status(500).json({ message: "Error updating spreadsheet", error: error.message, details: error.stack });
+      res.status(500).json({
+        message: "Error updating spreadsheet",
+        error: error.message,
+        details: error.stack,
+      });
     } else {
-        res.status(500).json({ message: "An unknown error occurred", details: error });
+      res
+        .status(500)
+        .json({ message: "An unknown error occurred", details: error });
     }
   }
 };

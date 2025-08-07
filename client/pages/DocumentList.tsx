@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
 import { format } from "date-fns";
+import { id } from "date-fns/locale";
 import { cn } from "../lib/utils";
 import DocumentDetail from "../components/DocumentDetail";
 
@@ -211,7 +212,7 @@ const DocumentList: React.FC = () => {
                 </div>
                 <div className="text-xs text-gray-500 flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {format(document.createdAt, "dd-MMM-yyyy")}
+                  {format(document.createdAt, "dd-MMM-yyyy", { locale: id })}
                 </div>
               </div>
 
