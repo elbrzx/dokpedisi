@@ -9,6 +9,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
+import { format } from "date-fns";
 import { cn } from "../lib/utils";
 import DocumentDetail from "../components/DocumentDetail";
 
@@ -210,11 +211,7 @@ const DocumentList: React.FC = () => {
                 </div>
                 <div className="text-xs text-gray-500 flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {new Intl.DateTimeFormat("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  }).format(document.createdAt)}
+                  {format(document.createdAt, "dd-MMM-yyyy")}
                 </div>
               </div>
 
