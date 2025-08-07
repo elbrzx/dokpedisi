@@ -12,13 +12,10 @@ export interface Document {
   position: string;
   createdAt: Date;
   expeditionHistory: Array<{
-    id: string;
-    date: Date;
-    time: string;
+    timestamp: string;
     recipient: string;
     signature?: string;
     notes?: string;
-    order: number;
   }>;
   currentRecipient?: string;
   isFromGoogleSheets?: boolean;
@@ -134,9 +131,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
           perihal: doc.perihal,
           position: doc.currentLocation || "Unknown",
           createdAt: doc.createdAt,
-          expeditionHistory: doc.expeditionHistory
-            ? JSON.parse(doc.expeditionHistory)
-            : [],
+          expeditionHistory: [],
           currentRecipient: doc.currentLocation,
           isFromGoogleSheets: true,
           lastExpedition: doc.lastExpedition,

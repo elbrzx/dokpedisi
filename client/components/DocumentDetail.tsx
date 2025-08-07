@@ -64,12 +64,12 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
             <p className="text-xs text-gray-500 mb-1">Current Status</p>
             <span
               className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                document.signature
-                  ? "bg-blue-100 text-blue-800"
+                document.position.toLowerCase() === "diterima"
+                  ? "bg-green-100 text-green-800"
                   : "bg-orange-100 text-orange-800"
               }`}
             >
-              {document.signature ? "Signed" : "Pending"}
+              {document.position}
             </span>
           </div>
 
@@ -90,60 +90,48 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
             {document.expeditionHistory &&
             document.expeditionHistory.length > 0 ? (
               <div className="space-y-4">
-                {document.expeditionHistory
-                  .slice()
-                  .reverse()
-                  .map((entry, index) => {
-                    const notesMatch = entry.details.match(/Catatan: (.*)/);
-                    const notes =
-                      notesMatch && notesMatch[1] !== "-"
-                        ? notesMatch[1]
-                        : null;
-
-                    return (
-                      <div
-                        key={entry.timestamp}
-                        className="p-3 bg-gray-50 rounded-lg border border-gray-200"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {entry.recipient}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {format(
-                                new Date(entry.timestamp),
-                                "dd-MMM-yyyy, HH:mm",
-                                { locale: id },
-                              )}
-                            </p>
-                          </div>
-                          <span className="text-xs text-gray-400">
-                            #{document.expeditionHistory.length - index}
-                          </span>
-                        </div>
-                        {notes && (
-                          <div className="mt-2 text-xs text-gray-700 bg-white p-2 rounded whitespace-pre-wrap border">
-                            {notes}
-                          </div>
-                        )}
-                        {entry.signature && (
-                          <div className="mt-2">
-                            <p className="text-xs text-gray-500 mb-1">
-                              Signature:
-                            </p>
-                            <div className="border border-gray-200 rounded-md p-1 bg-white flex justify-center">
-                              <img
-                                src={entry.signature}
-                                alt={`Signature from ${entry.recipient}`}
-                                className="max-w-full h-20 object-contain"
-                              />
-                            </div>
-                          </div>
-                        )}
+                {document.expeditionHistory.map((entry, index) => (
+                  <div
+                    key={index}
+                    className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {entry.recipient}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {/* The timestamp is now just YYYY-MM-DD string */}
+                          {format(new Date(entry.timestamp), "d MMM yyyy", {
+                            locale: id,
+                          })}
+                        </p>
                       </div>
-                    );
-                  })}
+                      <span className="text-xs text-gray-400">
+                        #{index + 1}
+                      </span>
+                    </div>
+                    {entry.notes && (
+                      <div className="mt-2 text-xs text-gray-700 bg-white p-2 rounded whitespace-pre-wrap border">
+                        {entry.notes}
+                      </div>
+                    )}
+                    {entry.signature && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-500 mb-1">
+                          Signature:
+                        </p>
+                        <div className="border border-gray-200 rounded-md p-1 bg-white flex justify-center">
+                          <img
+                            src={entry.signature}
+                            alt={`Signature from ${entry.recipient}`}
+                            className="max-w-full h-20 object-contain"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-xs text-gray-500">No expedition history.</p>

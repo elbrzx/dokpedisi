@@ -72,12 +72,8 @@ const DocumentList: React.FC = () => {
     switch (position.toLowerCase()) {
       case "pending":
         return "bg-orange-100 text-orange-800";
-      case "approved":
+      case "diterima":
         return "bg-green-100 text-green-800";
-      case "accepted":
-        return "bg-green-100 text-green-800";
-      case "in review":
-        return "bg-blue-100 text-blue-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -212,7 +208,7 @@ const DocumentList: React.FC = () => {
                 </div>
                 <div className="text-xs text-gray-500 flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {format(document.createdAt, "dd-MMM-yyyy", { locale: id })}
+                  {format(document.createdAt, "d MMM yyyy", { locale: id })}
                 </div>
               </div>
 

@@ -23,10 +23,24 @@ async function getGoogleSheetsClient() {
   return sheets;
 }
 
+// Helper to convert 0-indexed column number to Sheet column letter (e.g., 0 -> A, 26 -> AA)
+function toColumnName(num: number): string {
+  let str = "",
+    q,
+    r;
+  while (num >= 0) {
+    q = Math.floor(num / 26);
+    r = num % 26;
+    str = String.fromCharCode(65 + r) + str;
+    num = q - 1;
+  }
+  return str;
+}
+
 export const handleUpdateSheet: RequestHandler = async (req, res) => {
   console.log("Received request to update sheet with body:", req.body);
-  const { agendaNo, lastExpedition, currentLocation, status, signature } =
-    req.body;
+  const { agendaNo, lastExpedition, currentLocation, signature } = req.body;
+  const status = "Diterima"; // Status is always "Diterima" on submission
 
   if (!agendaNo) {
     return res.status(400).json({ message: "agendaNo is required" });
@@ -35,10 +49,10 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
   try {
     const sheets = await getGoogleSheetsClient();
 
-    // 1. Find the row with the matching agenda number, fetching all columns up to J
+    // 1. Find the row for the given agenda number, fetching a wide range of columns
     const findResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:J`, // Read up to column J for history
+      range: `${SHEET_NAME}!A:Z`, // Read up to Z to find empty history slots
     });
 
     const rows = findResponse.data.values;
@@ -55,56 +69,52 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
         .status(404)
         .json({ message: `Agenda number ${agendaNo} not found` });
     }
+    const actualRowNumber = rowIndex + 1; // Sheets are 1-indexed
 
-    const actualRowNumber = rowIndex + 1; // +1 because sheets are 1-indexed
-
-    // 2. Get existing history and append new record
+    // 2. Find the next available history slot
     const currentRow = rows[rowIndex];
-    const historyJson = currentRow[9] || "[]"; // History is in column J (index 9)
-    let history: any[] = [];
-
-    try {
-      history = JSON.parse(historyJson);
-      if (!Array.isArray(history)) {
-        console.warn("History data was not an array, resetting.");
-        history = [];
+    let targetColumnIndex = -1;
+    // History starts at column G (index 6) and repeats every 3 columns
+    for (let i = 6; i < 26; i += 3) {
+      if (!currentRow[i]) {
+        targetColumnIndex = i;
+        break;
       }
-    } catch (e) {
-      console.warn("Invalid JSON in history column, resetting.", e);
-      history = [];
     }
 
-    const newHistoryEntry = {
-      recipient: currentLocation,
-      details: lastExpedition,
-      status: status,
-      signature: signature || "",
-      timestamp: new Date().toISOString(),
-    };
-    history.push(newHistoryEntry);
-    const newHistoryJson = JSON.stringify(history);
+    if (targetColumnIndex === -1) {
+      return res
+        .status(500)
+        .json({ message: "No available history slots found for this document" });
+    }
 
-    // 3. Update the specific row with new expedition data AND history
-    const updateResponse = await sheets.spreadsheets.values.update({
+    // 3. Update the status in column F
+    await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!F${actualRowNumber}:J${actualRowNumber}`, // Update range to include history
+      range: `${SHEET_NAME}!F${actualRowNumber}`,
       valueInputOption: "RAW",
       requestBody: {
-        values: [
-          [
-            lastExpedition,
-            currentLocation,
-            status,
-            signature || "",
-            newHistoryJson, // Add the updated history
-          ],
-        ],
+        values: [[status]],
+      },
+    });
+
+    // 4. Update the history columns
+    const startColumn = toColumnName(targetColumnIndex);
+    const endColumn = toColumnName(targetColumnIndex + 2);
+    const historyUpdateRange = `${SHEET_NAME}!${startColumn}${actualRowNumber}:${endColumn}${actualRowNumber}`;
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: historyUpdateRange,
+      valueInputOption: "RAW",
+      requestBody: {
+        values: [[lastExpedition, currentLocation, signature || ""]],
       },
     });
 
     res.json({
       message: "Sheet updated successfully",
-      updatedRange: updateResponse.data.updatedRange,
+      updatedRange: historyUpdateRange,
     });
   } catch (error: any) {
     console.error("Full error object:", JSON.stringify(error, null, 2));
