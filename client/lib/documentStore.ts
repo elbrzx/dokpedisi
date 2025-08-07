@@ -45,33 +45,10 @@ interface DocumentStore {
   refreshDocuments: () => Promise<void>;
 }
 
-// Helper function to convert Google Sheets data to Document format
-function convertGoogleSheetToDocument(sheetDoc: GoogleSheetDocument, index: number): Document {
-  return {
-    id: `gs-${Date.now()}-${index}`,
-    agendaNo: sheetDoc.agendaNumber,
-    sender: sheetDoc.sender,
-    perihal: sheetDoc.perihal,
-    position: "Pending",
-    createdAt: new Date(),
-    expeditionHistory: [],
-    isFromGoogleSheets: true,
-  };
-}
 
-// Sample local documents for demonstration (will be merged with Google Sheets data)
-const initialLocalDocuments: Document[] = [
-  {
-    id: "local-1",
-    agendaNo: "LOCAL-001",
-    sender: "Local System",
-    perihal: "System Test Document",
-    position: "Pending",
-    createdAt: new Date("2024-01-15"),
-    expeditionHistory: [],
-    isFromGoogleSheets: false,
-  },
-];
+
+// Empty initial documents - will be populated from Google Sheets
+const initialLocalDocuments: Document[] = [];
 
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
   documents: initialLocalDocuments,
@@ -149,25 +126,8 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         googleSheetsDocuments = await fetchDocumentsFromGoogleSheets();
       }
       
-      // Merge with existing documents, avoiding duplicates
-      const existingDocs = get().documents;
-      const mergedDocuments = [...existingDocs];
-      
-      googleSheetsDocuments.forEach((gsDoc) => {
-        const existingIndex = existingDocs.findIndex(doc => doc.agendaNo === gsDoc.agendaNo);
-        if (existingIndex === -1) {
-          mergedDocuments.push(gsDoc);
-        } else {
-          // Update existing document with Google Sheets data
-          mergedDocuments[existingIndex] = {
-            ...mergedDocuments[existingIndex],
-            sender: gsDoc.sender,
-            perihal: gsDoc.perihal,
-          };
-        }
-      });
-      
-      set({ documents: mergedDocuments, isLoading: false });
+      // Replace all documents with Google Sheets data (no merging with dummy data)
+      set({ documents: googleSheetsDocuments, isLoading: false });
     } catch (error) {
       set({ 
         error: error instanceof Error ? error.message : 'Failed to load documents from Google Sheets',
@@ -187,6 +147,8 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         console.warn('API method failed, trying CSV method:', apiError);
         googleSheetsDocuments = await fetchDocumentsFromGoogleSheets();
       }
+      
+      // Replace all documents with Google Sheets data (no merging)
       set({ documents: googleSheetsDocuments, isLoading: false });
     } catch (error) {
       set({ 

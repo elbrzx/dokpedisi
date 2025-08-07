@@ -135,101 +135,112 @@ const DocumentList: React.FC = () => {
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search documents, No Agenda, Perihal, or recipients..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-        />
-      </div>
+      {/* Empty state when no documents */}
+      {!isLoading && documents.length === 0 && (
+        <div className="text-center py-8 text-gray-500">
+          <FileText className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+          <p className="text-sm">No documents found</p>
+          <p className="text-xs mt-1">Try refreshing to load data from Google Sheets</p>
+        </div>
+      )}
 
-      {/* Filter Type Selector */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => handleFilterTypeChange("status")}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
-            filterType === "status"
-              ? "bg-orange-100 text-orange-800 border border-orange-200"
-              : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200",
-          )}
-        >
-          <User className="h-4 w-4" />
-          Filter by Status
-        </button>
+      {/* Search and Filter Controls - Always visible */}
+      <div className="space-y-3">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search documents, No Agenda, Perihal, or recipients..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Filter Type Selector */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleFilterTypeChange("status")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
+              filterType === "status"
+                ? "bg-orange-100 text-orange-800 border border-orange-200"
+                : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200",
+            )}
+          >
+            <User className="h-4 w-4" />
+            Filter by Status
+          </button>
+        </div>
       </div>
 
       {/* Filter Options */}
-      <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-gray-500" />
-        {filterType === "status" ? (
-          <select
-            value={filterValue}
-            onChange={(e) => setFilterValue(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          >
-            <option value="all">All Statuses</option>
-            {positions.map((position) => (
-              <option key={position} value={position}>
-                {position}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <select
-            value={filterValue}
-            onChange={(e) => setFilterValue(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          >
-            <option value="all">All Documents</option>
-            <optgroup label="Agenda Numbers">
-              {agendaNumbers.map((agenda) => (
-                <option key={`agenda-${agenda}`} value={agenda}>
-                  {agenda}
+      {!isLoading && documents.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-gray-500" />
+          {filterType === "status" ? (
+            <select
+              value={filterValue}
+              onChange={(e) => setFilterValue(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="all">All Statuses</option>
+              {positions.map((position) => (
+                <option key={position} value={position}>
+                  {position}
                 </option>
               ))}
-            </optgroup>
-            <optgroup label="Perihal">
-              {perihals.map((perihal) => (
-                <option key={`perihal-${perihal}`} value={perihal}>
-                  {perihal.length > 30
-                    ? `${perihal.substring(0, 30)}...`
-                    : perihal}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-        )}
-      </div>
+            </select>
+          ) : (
+            <select
+              value={filterValue}
+              onChange={(e) => setFilterValue(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="all">All Documents</option>
+              <optgroup label="Agenda Numbers">
+                {agendaNumbers.map((agenda) => (
+                  <option key={`agenda-${agenda}`} value={agenda}>
+                    {agenda}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Perihal">
+                {perihals.map((perihal) => (
+                  <option key={`perihal-${perihal}`} value={perihal}>
+                    {perihal.length > 30
+                      ? `${perihal.substring(0, 30)}...`
+                      : perihal}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          )}
+        </div>
+      )}
 
       {/* Document Count */}
-      <div className="text-xs text-gray-600">
-        Showing {limitedDocuments.length} of {filteredDocuments.length} documents
-        {filteredDocuments.length > 50 && (
-          <span className="ml-2 text-orange-600">
-            • Limited to 50 for performance
-          </span>
-        )}
-        {filterType === "agenda" && filterValue !== "all" && (
-          <span className="ml-2 text-orange-600">
-            • Filtered by: {filterValue}
-          </span>
-        )}
-      </div>
+      {!isLoading && documents.length > 0 && (
+        <div className="text-xs text-gray-600">
+          Showing {limitedDocuments.length} of {filteredDocuments.length} documents
+          {filteredDocuments.length > 50 && (
+            <span className="ml-2 text-orange-600">
+              • Limited to 50 for performance
+            </span>
+          )}
+          {filterType === "agenda" && filterValue !== "all" && (
+            <span className="ml-2 text-orange-600">
+              • Filtered by: {filterValue}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Document List */}
-      <div className="space-y-2">
-        {limitedDocuments.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <FileText className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-            <p className="text-sm">No documents found</p>
-          </div>
-        ) : (
-          limitedDocuments.map((document) => (
+      {!isLoading && documents.length > 0 && (
+        <div className="space-y-2">
+          {limitedDocuments.map((document) => (
             <div
               key={document.id}
               onClick={() => handleDocumentClick(document)}
@@ -292,9 +303,9 @@ const DocumentList: React.FC = () => {
                 )}
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       <DocumentDetail
         document={selectedDocument}

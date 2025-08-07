@@ -101,15 +101,39 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<Document[]> {
       const agendaNo = row[0] || `AGENDA-${String(index + 1).padStart(3, '0')}`; // Column A
       const sender = `${row[3] || ''} ${row[4] || ''}`.trim() || 'Unknown Sender'; // Columns D and E
       const perihal = `${row[4] || ''} ${row[5] || ''} ${row[6] || ''}`.trim() || 'No Perihal'; // Columns E, F, G
+      const lastExpedition = row[7] || ''; // Column H
+      const currentLocation = row[8] || ''; // Column I
+      const status = row[9] || 'Pending'; // Column J
+      const signature = row[10] || ''; // Column K
+      
+      // Parse expedition history from last expedition data
+      let expeditionHistory = [];
+      if (lastExpedition) {
+        try {
+          const expeditionData = JSON.parse(lastExpedition);
+          expeditionHistory = Array.isArray(expeditionData) ? expeditionData : [];
+        } catch (e) {
+          // If parsing fails, create a simple expedition entry
+          expeditionHistory = [{
+            id: `exp-${Date.now()}-${index}`,
+            date: new Date(),
+            time: new Date().toLocaleTimeString(),
+            recipient: currentLocation,
+            order: 1,
+            notes: lastExpedition
+          }];
+        }
+      }
       
       return {
         id: `gs-${index + 1}`,
         agendaNo: agendaNo,
         sender: sender,
         perihal: perihal,
-        position: 'Pending', // Default position
+        position: status,
         createdAt: new Date(),
-        expeditionHistory: [],
+        expeditionHistory: expeditionHistory,
+        currentRecipient: currentLocation,
         isFromGoogleSheets: true,
       };
     });
@@ -199,4 +223,88 @@ export async function fetchDocumentsWithAPI(apiKey: string): Promise<GoogleSheet
     console.error('Error fetching documents with Google Sheets API:', error);
     return [];
   }
+}
+
+// Function to update expedition data in Google Sheets
+export async function updateExpeditionData(
+  agendaNo: string,
+  expeditionData: {
+    date: Date;
+    time: string;
+    recipient: string;
+    notes?: string;
+    signature?: string;
+  }
+): Promise<boolean> {
+  try {
+    console.log('Updating expedition data for agenda:', agendaNo);
+    
+    // Convert signature to base64 if provided
+    let signatureBase64 = '';
+    if (expeditionData.signature) {
+      // Convert data URL to base64
+      const base64Data = expeditionData.signature.split(',')[1];
+      signatureBase64 = base64Data || '';
+    }
+    
+    // Prepare expedition history data
+    const expeditionEntry = {
+      id: `exp-${Date.now()}`,
+      date: expeditionData.date.toISOString(),
+      time: expeditionData.time,
+      recipient: expeditionData.recipient,
+      notes: expeditionData.notes || '',
+      order: 1, // This will be calculated based on existing expeditions
+    };
+    
+    // For now, we'll use a simple approach with Netlify Function
+    // In production, you'd want to implement proper Google Sheets API write
+    const response = await fetch('/.netlify/functions/update-expedition', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        agendaNo,
+        expeditionData: expeditionEntry,
+        currentLocation: expeditionData.recipient,
+        status: 'Accepted',
+        signature: signatureBase64,
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to update expedition: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    return result.success;
+  } catch (error) {
+    console.error('Error updating expedition data:', error);
+    return false;
+  }
+}
+
+// Function to convert signature to low-res JPG
+export function convertSignatureToLowResJPG(signatureDataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      // Set canvas size for low resolution (e.g., 200x100)
+      canvas.width = 200;
+      canvas.height = 100;
+      
+      // Draw image with low quality
+      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      // Convert to low quality JPG
+      const lowResJPG = canvas.toDataURL('image/jpeg', 0.3); // 30% quality
+      resolve(lowResJPG);
+    };
+    
+    img.src = signatureDataUrl;
+  });
 }

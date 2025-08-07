@@ -36,6 +36,26 @@ export const DATA_MAPPING = {
     columns: ['E', 'F', 'G'],
     label: 'Perihal',
     range: 'E2:G'
+  },
+  LAST_EXPEDITION: {
+    column: 'H',
+    label: 'Last Expedition',
+    range: 'H2:H'
+  },
+  CURRENT_LOCATION: {
+    column: 'I',
+    label: 'Current Location',
+    range: 'I2:I'
+  },
+  STATUS: {
+    column: 'J',
+    label: 'Status',
+    range: 'J2:J'
+  },
+  SIGNATURE: {
+    column: 'K',
+    label: 'Signature',
+    range: 'K2:K'
   }
 };
 

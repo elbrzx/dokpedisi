@@ -3,6 +3,7 @@ import { Search, X, Save, Trash2 } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
 import { useToast } from "../lib/toastContext";
 import { cn } from "../lib/utils";
+import { updateExpeditionData, convertSignatureToLowResJPG } from "../lib/googleSheetsService";
 import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useNavigationGuard } from "../App";
@@ -108,7 +109,7 @@ const Expedition: React.FC = () => {
     (doc) =>
       doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.subject.toLowerCase().includes(searchTerm.toLowerCase()),
+              doc.perihal.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   // Initialize canvas
@@ -227,7 +228,7 @@ const Expedition: React.FC = () => {
     setSelectedDocuments((prev) => prev.filter((d) => d.id !== documentId));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (selectedDocuments.length === 0 || !recipient.trim()) {
@@ -238,35 +239,70 @@ const Expedition: React.FC = () => {
       return;
     }
 
-    addExpedition({
-      documentIds: selectedDocuments.map((d) => d.id),
-      recipient: recipient.trim(),
-      date: new Date(date),
-      time,
-      signature: signature || undefined,
-      notes: notes.trim() || undefined,
-    });
+    try {
+      // Process each selected document
+      for (const document of selectedDocuments) {
+        // Convert signature to low-res JPG if available
+        let processedSignature = '';
+        if (signature) {
+          processedSignature = await convertSignatureToLowResJPG(signature);
+        }
 
-    // Reset form
-    setSelectedDocuments([]);
-    setRecipient("");
-    setDate(new Date().toISOString().split("T")[0]);
-    setTime(
-      new Date().toLocaleTimeString("en-US", {
-        hour12: false,
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    );
-    setNotes("");
-    clearSignature();
-    setHasFormChanges(false);
-    setShouldBlockNavigation(false);
+        // Update expedition data in Google Sheets
+        const success = await updateExpeditionData(document.agendaNo, {
+          date: new Date(date),
+          time,
+          recipient: recipient.trim(),
+          notes: notes.trim() || undefined,
+          signature: processedSignature,
+        });
 
-    showToast(
-      "Expedition submitted successfully! Document positions have been updated.",
-      "success",
-    );
+        if (!success) {
+          showToast(
+            `Failed to update expedition data for ${document.agendaNo}`,
+            "error",
+          );
+          return;
+        }
+      }
+
+      // Add expedition to local store
+      addExpedition({
+        documentIds: selectedDocuments.map((d) => d.id),
+        recipient: recipient.trim(),
+        date: new Date(date),
+        time,
+        signature: signature || undefined,
+        notes: notes.trim() || undefined,
+      });
+
+      // Reset form
+      setSelectedDocuments([]);
+      setRecipient("");
+      setDate(new Date().toISOString().split("T")[0]);
+      setTime(
+        new Date().toLocaleTimeString("en-US", {
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      );
+      setNotes("");
+      clearSignature();
+      setHasFormChanges(false);
+      setShouldBlockNavigation(false);
+
+      showToast(
+        "Expedition submitted successfully! Data has been saved to Google Sheets.",
+        "success",
+      );
+    } catch (error) {
+      console.error('Error submitting expedition:', error);
+      showToast(
+        "Failed to submit expedition. Please try again.",
+        "error",
+      );
+    }
   };
 
   return (
@@ -290,7 +326,7 @@ const Expedition: React.FC = () => {
                       {doc.agendaNo}
                     </p>
                     <p className="text-xs text-orange-600 truncate">
-                      {doc.subject}
+                      {doc.perihal}
                     </p>
                   </div>
                   <button
@@ -350,9 +386,9 @@ const Expedition: React.FC = () => {
                         <p className="text-xs font-medium text-gray-900">
                           {document.agendaNo}
                         </p>
-                        <p className="text-xs text-gray-600 truncate">
-                          {document.subject}
-                        </p>
+                                            <p className="text-xs text-gray-600 truncate">
+                      {document.perihal}
+                    </p>
                         <p className="text-xs text-gray-500">
                           {document.sender}
                         </p>
