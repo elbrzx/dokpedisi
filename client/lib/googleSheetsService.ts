@@ -154,16 +154,12 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<{
       return { documents: [], total: 0 };
     }
 
-    // Get the most recent 500 rows
-    const recentRows = rows.slice(-500);
-    console.log(
-      `Processing most recent ${recentRows.length} rows out of ${totalRows} total`,
-    );
+    console.log(`Processing ${totalRows} rows from sheet`);
 
     const documents: GoogleSheetDocument[] = [];
 
-    for (let i = 0; i < recentRows.length; i++) {
-      const doc = convertRowToDocument(recentRows[i], i);
+    for (let i = 0; i < totalRows; i++) {
+      const doc = convertRowToDocument(rows[i], i);
       if (doc) {
         documents.push(doc);
       }
