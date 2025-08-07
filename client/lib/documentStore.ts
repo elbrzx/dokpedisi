@@ -124,7 +124,8 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   loadGoogleSheetsData: async () => {
     set({ isLoadingGoogleSheets: true, googleSheetsError: null });
     try {
-      const googleSheetsDocuments = await fetchDocumentsFromGoogleSheets();
+      const { documents: googleSheetsDocuments, total } =
+        await fetchDocumentsFromGoogleSheets();
       const documents: Document[] = googleSheetsDocuments.map((doc, index) => ({
         id: `${doc.agendaNumber}-${index}`,
         agendaNo: doc.agendaNumber,
@@ -141,7 +142,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       set({
         documents,
         isLoadingGoogleSheets: false,
-        totalDocumentsCount: documents.length,
+        totalDocumentsCount: total,
         lastGoogleSheetsSync: new Date(),
       });
     } catch (error) {
