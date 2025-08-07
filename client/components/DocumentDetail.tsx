@@ -1,5 +1,7 @@
 import React from "react";
 import { X, Calendar, User, FileText, Clock, MapPin } from "lucide-react";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
 import { Document } from "../lib/documentStore";
 
 interface DocumentDetailProps {
@@ -15,21 +17,6 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
 }) => {
   if (!isOpen || !document) return null;
 
-  const parseLastExpedition = (lastExpedition: string | undefined) => {
-    if (!lastExpedition) {
-      return { receivedDate: null, notes: null };
-    }
-
-    const parts = lastExpedition.split(". Catatan: ");
-    const receivedDatePart = parts[0];
-    const notes = parts[1] && parts[1] !== "-" ? parts[1] : null;
-
-    const receivedDate = receivedDatePart.replace("Diterima pada ", "").trim();
-
-    return { receivedDate, notes };
-  };
-
-  const { receivedDate, notes } = parseLastExpedition(document.lastExpedition);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -95,40 +82,73 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
             </div>
           )}
 
-          {receivedDate && (
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Last Received</p>
-              <p className="text-sm font-medium text-gray-900">
-                {receivedDate}
-              </p>
-            </div>
-          )}
+          {/* Expedition History */}
+          <div className="border-t border-gray-200 pt-4">
+            <h3 className="text-sm font-semibold text-gray-800 mb-2">
+              Expedition History
+            </h3>
+            {document.expeditionHistory &&
+            document.expeditionHistory.length > 0 ? (
+              <div className="space-y-4">
+                {document.expeditionHistory
+                  .slice()
+                  .reverse()
+                  .map((entry, index) => {
+                    const notesMatch = entry.details.match(/Catatan: (.*)/);
+                    const notes =
+                      notesMatch && notesMatch[1] !== "-"
+                        ? notesMatch[1]
+                        : null;
 
-          {/* Signature & Notes */}
-          {(document.signature || notes) && (
-            <div className="border-t border-gray-200 pt-4 space-y-4">
-              {notes && (
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Notes</p>
-                  <p className="text-sm text-gray-800 bg-gray-50 p-3 rounded-md whitespace-pre-wrap">
-                    {notes}
-                  </p>
-                </div>
-              )}
-              {document.signature && (
-                <div>
-                  <p className="text-xs text-gray-500 mb-2">Signature</p>
-                  <div className="border border-gray-200 rounded-lg p-2 bg-white flex justify-center">
-                    <img
-                      src={document.signature}
-                      alt={`Signature`}
-                      className="max-w-full h-24 object-contain"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                    return (
+                      <div
+                        key={entry.timestamp}
+                        className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {entry.recipient}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {format(
+                                new Date(entry.timestamp),
+                                "dd-MMM-yyyy, HH:mm",
+                                { locale: id },
+                              )}
+                            </p>
+                          </div>
+                          <span className="text-xs text-gray-400">
+                            #{document.expeditionHistory.length - index}
+                          </span>
+                        </div>
+                        {notes && (
+                          <div className="mt-2 text-xs text-gray-700 bg-white p-2 rounded whitespace-pre-wrap border">
+                            {notes}
+                          </div>
+                        )}
+                        {entry.signature && (
+                          <div className="mt-2">
+                            <p className="text-xs text-gray-500 mb-1">
+                              Signature:
+                            </p>
+                            <div className="border border-gray-200 rounded-md p-1 bg-white flex justify-center">
+                              <img
+                                src={entry.signature}
+                                alt={`Signature from ${entry.recipient}`}
+                                className="max-w-full h-20 object-contain"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500">No expedition history.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
