@@ -200,7 +200,6 @@ export async function updateSpreadsheetWithExpedition(
   agendaNo: string,
   lastExpedition: string,
   currentLocation: string,
-  status: string,
   signature?: string,
 ): Promise<boolean> {
   try {
@@ -215,7 +214,6 @@ export async function updateSpreadsheetWithExpedition(
         agendaNo,
         lastExpedition,
         currentLocation,
-        status,
         signature,
       }),
     });

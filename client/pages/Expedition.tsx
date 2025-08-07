@@ -254,14 +254,15 @@ const Expedition: React.FC = () => {
         }
 
         // Construct expedition details from form data
-        const expeditionDetails = `Dikirim ke ${recipient.trim()} pada ${date} jam ${time}. Catatan: ${notes.trim() || "-"}`;
+        const expeditionDetails = `Diterima pada ${date} jam ${time}. Catatan: ${
+          notes.trim() || "-"
+        }`;
 
         // Update expedition data in Google Sheets
         const success = await updateSpreadsheetWithExpedition(
           document.agendaNo,
           expeditionDetails, // lastExpedition
           recipient.trim(), // currentLocation
-          "Terkirim", // status
           processedSignature,
         );
 

@@ -25,8 +25,7 @@ async function getGoogleSheetsClient() {
 
 export const handleUpdateSheet: RequestHandler = async (req, res) => {
   console.log("Received request to update sheet with body:", req.body);
-  const { agendaNo, lastExpedition, currentLocation, status, signature } =
-    req.body;
+  const { agendaNo, lastExpedition, currentLocation, signature } = req.body;
 
   if (!agendaNo) {
     return res.status(400).json({ message: "agendaNo is required" });
@@ -61,10 +60,10 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
     // 2. Update the specific row
     const updateResponse = await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!F${actualRowNumber}:I${actualRowNumber}`,
+      range: `${SHEET_NAME}!F${actualRowNumber}:H${actualRowNumber}`,
       valueInputOption: "RAW",
       requestBody: {
-        values: [[lastExpedition, currentLocation, status, signature || ""]],
+        values: [[lastExpedition, currentLocation, signature || ""]],
       },
     });
 

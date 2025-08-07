@@ -16,7 +16,7 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
   if (!isOpen || !document) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black bg-opacity-30"
@@ -24,9 +24,9 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-t-lg shadow-lg w-full max-h-[85vh] flex flex-col">
+      <div className="relative bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
         {/* Header - Fixed */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10 rounded-t-lg">
           <h2 className="text-lg font-semibold text-gray-900">
             Document Details
           </h2>
@@ -227,7 +227,7 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
           )}
 
           {/* No Expeditions Message */}
-          {document.expeditionHistory.length === 0 && (
+          {document.expeditionHistory.length === 0 && !document.signature && (
             <div className="border-t border-gray-200 pt-4">
               <div className="text-center py-6 text-gray-500">
                 <Clock className="h-8 w-8 mx-auto mb-2 text-gray-300" />
@@ -235,6 +235,23 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
                 <p className="text-xs mt-1">
                   Document is still at its original location
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* Signature for documents loaded from sheet */}
+          {document.expeditionHistory.length === 0 && document.signature && (
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <User className="h-4 w-4 text-purple-600" />
+                Latest Signature
+              </h3>
+              <div className="border border-gray-200 rounded-lg p-2 bg-white">
+                <img
+                  src={document.signature}
+                  alt={`Signature`}
+                  className="max-w-full h-24 object-contain"
+                />
               </div>
             </div>
           )}
