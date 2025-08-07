@@ -56,30 +56,23 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
 
         {/* Content - Scrollable */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Agenda Number */}
-          <div className="flex items-center gap-3">
-            <FileText className="h-5 w-5 text-orange-600" />
-            <div>
-              <p className="text-xs text-gray-500">Agenda Number</p>
-              <p className="text-sm font-medium text-gray-900">
-                {document.agendaNo}
-              </p>
-            </div>
+          <div>
+            <p className="text-xs text-gray-500">Agenda Number</p>
+            <p className="text-sm font-medium text-gray-900">
+              {document.agendaNo}
+            </p>
           </div>
 
-          {/* Perihal */}
           <div>
             <p className="text-xs text-gray-500 mb-1">Perihal</p>
             <p className="text-sm text-gray-900">{document.perihal}</p>
           </div>
 
-          {/* Sender */}
           <div>
             <p className="text-xs text-gray-500 mb-1">Sender</p>
             <p className="text-sm text-gray-900">{document.sender}</p>
           </div>
 
-          {/* Status */}
           <div>
             <p className="text-xs text-gray-500 mb-1">Current Status</p>
             <span
@@ -93,7 +86,6 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
             </span>
           </div>
 
-          {/* Current Recipient */}
           {document.currentRecipient && (
             <div>
               <p className="text-xs text-gray-500 mb-1">Current Location</p>
@@ -103,7 +95,6 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
             </div>
           )}
 
-          {/* Last Received Date */}
           {receivedDate && (
             <div>
               <p className="text-xs text-gray-500 mb-1">Last Received</p>
@@ -115,11 +106,11 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
 
           {/* Signature & Notes */}
           {(document.signature || notes) && (
-            <div className="border-t border-gray-200 pt-4">
+            <div className="border-t border-gray-200 pt-4 space-y-4">
               {notes && (
-                <div className="mb-4">
+                <div>
                   <p className="text-xs text-gray-500 mb-1">Notes</p>
-                  <p className="text-sm text-gray-800 bg-gray-50 p-3 rounded-md">
+                  <p className="text-sm text-gray-800 bg-gray-50 p-3 rounded-md whitespace-pre-wrap">
                     {notes}
                   </p>
                 </div>
