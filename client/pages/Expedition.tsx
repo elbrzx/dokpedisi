@@ -258,6 +258,10 @@ const Expedition: React.FC = () => {
     try {
       let signatureUrl = "";
       if (signature) {
+        console.log("Submitting signature:", {
+          imageSize: signature.length,
+          isCanvasBlank: isCanvasBlank(canvasRef.current),
+        });
         // 1. Upload signature to Supabase via our backend
         const uploadResponse = await fetch("/api/upload-signature", {
           method: "POST",

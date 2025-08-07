@@ -126,19 +126,21 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     try {
       const { documents: googleSheetsDocuments, total } =
         await fetchDocumentsFromGoogleSheets();
-      const documents: Document[] = googleSheetsDocuments.map((doc, index) => ({
-        id: `${doc.agendaNumber}-${index}`,
-        agendaNo: doc.agendaNumber,
-        sender: doc.sender,
-        perihal: doc.perihal,
-        position: doc.currentLocation || "Unknown",
-        createdAt: doc.createdAt,
-        expeditionHistory: [],
-        currentRecipient: doc.currentLocation,
-        isFromGoogleSheets: true,
-        lastExpedition: doc.lastExpedition,
-        signature: doc.signature,
-      }));
+      const documents: Document[] = googleSheetsDocuments
+        .map((doc, index) => ({
+          id: `${doc.agendaNumber}-${index}`,
+          agendaNo: doc.agendaNumber,
+          sender: doc.sender,
+          perihal: doc.perihal,
+          position: doc.currentLocation || "Unknown",
+          createdAt: doc.createdAt,
+          expeditionHistory: [],
+          currentRecipient: doc.currentLocation,
+          isFromGoogleSheets: true,
+          lastExpedition: doc.lastExpedition,
+          signature: doc.signature,
+        }))
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
       set({
         documents,
         isLoadingGoogleSheets: false,
