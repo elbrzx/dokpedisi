@@ -28,34 +28,34 @@ export const DATA_MAPPING = {
     range: 'A2:A'
   },
   SENDER: {
-    columns: ['D', 'E'],
+    column: 'D',
     label: 'Pengirim',
-    range: 'D2:E'
+    range: 'D2:D'
   },
-  SUBJECT: {
-    columns: ['E', 'F', 'G'],
+  PERIHAL: {
+    column: 'E',
     label: 'Perihal',
-    range: 'E2:G'
+    range: 'E2:E'
   },
   LAST_EXPEDITION: {
-    column: 'H',
+    column: 'F',
     label: 'Last Expedition',
-    range: 'H2:H'
+    range: 'F2:F'
   },
   CURRENT_LOCATION: {
-    column: 'I',
+    column: 'G',
     label: 'Current Location',
-    range: 'I2:I'
+    range: 'G2:G'
   },
   STATUS: {
-    column: 'J',
+    column: 'H',
     label: 'Status',
-    range: 'J2:J'
+    range: 'H2:H'
   },
   SIGNATURE: {
-    column: 'K',
+    column: 'I',
     label: 'Signature',
-    range: 'K2:K'
+    range: 'I2:I'
   }
 };
 

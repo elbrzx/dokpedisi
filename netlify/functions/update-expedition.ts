@@ -55,8 +55,18 @@ export const handler: Handler = async (event) => {
   }
 
   try {
+    console.log('Received request body:', event.body);
+    
     const body: UpdateExpeditionRequest = JSON.parse(event.body || '{}');
     const { agendaNo, expeditionData, currentLocation, status, signature } = body;
+
+    console.log('Parsed request data:', {
+      agendaNo,
+      expeditionData,
+      currentLocation,
+      status,
+      signatureLength: signature ? signature.length : 0
+    });
 
     if (!agendaNo) {
       throw new Error('Agenda number is required');
@@ -96,43 +106,54 @@ export const handler: Handler = async (event) => {
     // Get existing expedition history
     const existingDataResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!H${targetRow}:K${targetRow}`,
+      range: `${SHEET_NAME}!F${targetRow}:I${targetRow}`,
     });
 
     const existingData = existingDataResponse.data.values?.[0] || [];
-    let existingExpeditions = [];
+    let existingExpeditions: any[] = [];
 
     // Parse existing expedition history
     if (existingData[0]) {
       try {
         existingExpeditions = JSON.parse(existingData[0]);
+        if (!Array.isArray(existingExpeditions)) {
+          existingExpeditions = [];
+        }
       } catch (e) {
-        // If parsing fails, start with empty array
+        console.log('Failed to parse existing expeditions, starting fresh');
         existingExpeditions = [];
       }
     }
+
+    console.log('Existing expeditions:', existingExpeditions);
 
     // Add new expedition
     expeditionData.order = existingExpeditions.length + 1;
     existingExpeditions.push(expeditionData);
 
+    console.log('Updated expeditions:', existingExpeditions);
+
     // Prepare update data
     const updateData = [
-      JSON.stringify(existingExpeditions), // Column H - Last Expedition
-      currentLocation, // Column I - Current Location
-      status, // Column J - Status
-      signature, // Column K - Signature
+      JSON.stringify(existingExpeditions), // Column F - Last Expedition
+      currentLocation, // Column G - Current Location
+      status, // Column H - Status
+      signature, // Column I - Signature
     ];
 
+    console.log('Updating row', targetRow, 'with data:', updateData);
+
     // Update the row
-    await sheets.spreadsheets.values.update({
+    const updateResponse = await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!H${targetRow}:K${targetRow}`,
+      range: `${SHEET_NAME}!F${targetRow}:I${targetRow}`,
       valueInputOption: 'RAW',
       requestBody: {
         values: [updateData],
       },
     });
+
+    console.log('Update response:', updateResponse.data);
 
     return {
       statusCode: 200,

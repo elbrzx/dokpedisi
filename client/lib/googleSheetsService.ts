@@ -99,12 +99,12 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<Document[]> {
     // Skip header row and map data according to specifications
     const documents: Document[] = rows.slice(1).map((row, index) => {
       const agendaNo = row[0] || `AGENDA-${String(index + 1).padStart(3, '0')}`; // Column A
-      const sender = `${row[3] || ''} ${row[4] || ''}`.trim() || 'Unknown Sender'; // Columns D and E
-      const perihal = `${row[4] || ''} ${row[5] || ''} ${row[6] || ''}`.trim() || 'No Perihal'; // Columns E, F, G
-      const lastExpedition = row[7] || ''; // Column H
-      const currentLocation = row[8] || ''; // Column I
-      const status = row[9] || 'Pending'; // Column J
-      const signature = row[10] || ''; // Column K
+      const sender = row[3] || 'Unknown Sender'; // Column D
+      const perihal = row[4] || 'No Perihal'; // Column E
+      const lastExpedition = row[5] || ''; // Column F
+      const currentLocation = row[6] || ''; // Column G
+      const status = row[7] || 'Pending'; // Column H
+      const signature = row[8] || ''; // Column I
       
       // Parse expedition history from last expedition data
       let expeditionHistory = [];
@@ -257,8 +257,15 @@ export async function updateExpeditionData(
       order: 1, // This will be calculated based on existing expeditions
     };
     
-    // For now, we'll use a simple approach with Netlify Function
-    // In production, you'd want to implement proper Google Sheets API write
+    console.log('Sending expedition data:', {
+      agendaNo,
+      expeditionData: expeditionEntry,
+      currentLocation: expeditionData.recipient,
+      status: 'Accepted',
+      signature: signatureBase64 ? 'base64_data_present' : 'no_signature',
+    });
+    
+    // Use Netlify Function to update Google Sheets
     const response = await fetch('/.netlify/functions/update-expedition', {
       method: 'POST',
       headers: {
@@ -273,14 +280,24 @@ export async function updateExpeditionData(
       }),
     });
     
+    console.log('Response status:', response.status);
+    
     if (!response.ok) {
-      throw new Error(`Failed to update expedition: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Response error:', errorText);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
     
     const result = await response.json();
-    return result.success;
+    console.log('Update result:', result);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Unknown error from server');
+    }
+    
+    return true;
   } catch (error) {
-    console.error('Error updating expedition data:', error);
+    console.error('Error updating expedition data for agenda', agendaNo, ':', error);
     return false;
   }
 }
