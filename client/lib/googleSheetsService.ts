@@ -168,7 +168,7 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<{
     console.log(
       `Successfully processed ${documents.length} documents from ${totalRows} rows`,
     );
-    return { documents: documents.reverse(), total: totalRows }; // Reverse to show newest first
+    return { documents, total: totalRows };
   } catch (error) {
     console.error("Error fetching documents from Google Sheets:", error);
     return { documents: [], total: 0 };

@@ -11,7 +11,9 @@
     ]
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "npm-run-all --parallel dev:client dev:server",
+    "dev:client": "vite",
+    "dev:server": "tsx watch server/index.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "vite build --config vite.config.server.ts",
@@ -81,6 +83,7 @@
     "input-otp": "^1.2.4",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
+    "npm-run-all": "^4.1.5",
     "postcss": "^8.5.6",
     "prettier": "^3.5.3",
     "react": "^18.3.1",

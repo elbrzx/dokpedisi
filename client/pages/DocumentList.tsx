@@ -41,7 +41,8 @@ const DocumentList: React.FC = () => {
   useEffect(() => {
     // When documents load, set the initial displayed documents to the latest 500
     if (documents.length > 0) {
-      setDisplayedDocuments(documents.slice(0, 500));
+      // Slice the last 500 and then reverse them to show newest first
+      setDisplayedDocuments(documents.slice(-500).reverse());
     }
   }, [documents]);
 
@@ -50,10 +51,10 @@ const DocumentList: React.FC = () => {
     setSearchTerm(term);
 
     if (term.trim() === "") {
-      // If search is cleared, show the initial 500
-      setDisplayedDocuments(documents.slice(0, 500));
+      // If search is cleared, show the initial 500 latest
+      setDisplayedDocuments(documents.slice(-500).reverse());
     } else {
-      // If searching, filter the entire list of documents
+      // If searching, filter the entire list of documents and reverse the result
       const filtered = documents.filter(
         (doc) =>
           doc.agendaNo.toLowerCase().includes(term.toLowerCase()) ||
@@ -61,7 +62,7 @@ const DocumentList: React.FC = () => {
           doc.perihal.toLowerCase().includes(term.toLowerCase()) ||
           doc.currentRecipient?.toLowerCase().includes(term.toLowerCase()),
       );
-      setDisplayedDocuments(filtered);
+      setDisplayedDocuments(filtered.reverse());
     }
   };
 
