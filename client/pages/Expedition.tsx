@@ -262,7 +262,7 @@ const Expedition: React.FC = () => {
         // Convert signature to low-res JPG if available
         let processedSignature = "";
         if (signature && !isCanvasBlank(canvasRef.current)) {
-          processedSignature = convertSignatureToLowResJPEG(signature);
+          processedSignature = await convertSignatureToLowResJPEG(signature);
         }
 
         // Construct expedition details from form data

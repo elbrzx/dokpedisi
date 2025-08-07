@@ -12,10 +12,11 @@ export interface Document {
   position: string;
   createdAt: Date;
   expeditionHistory: Array<{
-    timestamp: string;
+    timestamp: Date;
     recipient: string;
     signature?: string;
     notes?: string;
+    details?: string;
   }>;
   currentRecipient?: string;
   isFromGoogleSheets?: boolean;

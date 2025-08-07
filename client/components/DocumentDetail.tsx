@@ -44,7 +44,7 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
         {/* Content - Scrollable */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div>
-            <p className="text-xs text-gray-500">Agenda Number</p>
+            <p className="text-xs text-gray-500">No Agenda</p>
             <p className="text-sm font-medium text-gray-900">
               {document.agendaNo}
             </p>
