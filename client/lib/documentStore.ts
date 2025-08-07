@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { fetchDocumentsFromGoogleSheets, GoogleSheetDocument } from "./googleSheetsService";
+import { fetchDocumentsFromGoogleSheets, fetchDocumentsFromGoogleSheetsAPI, GoogleSheetDocument } from "./googleSheetsService";
 
 export interface Document {
   id: string;
@@ -35,15 +35,14 @@ export interface ExpeditionRecord {
 interface DocumentStore {
   documents: Document[];
   expeditions: ExpeditionRecord[];
-  isLoadingGoogleSheets: boolean;
-  googleSheetsError: string | null;
-  lastGoogleSheetsSync: Date | null;
+  isLoading: boolean;
+  error: string | null;
   addDocument: (document: Omit<Document, "id" | "createdAt">) => void;
   updateDocumentPosition: (documentId: string, position: string) => void;
   addExpedition: (expedition: Omit<ExpeditionRecord, "id">) => void;
   getDocumentsByIds: (ids: string[]) => Document[];
-  loadGoogleSheetsData: () => Promise<void>;
-  syncWithGoogleSheets: () => Promise<void>;
+  loadDocumentsFromGoogleSheets: () => Promise<void>;
+  refreshDocuments: () => Promise<void>;
 }
 
 // Helper function to convert Google Sheets data to Document format
@@ -77,9 +76,8 @@ const initialLocalDocuments: Document[] = [
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
   documents: initialLocalDocuments,
   expeditions: [],
-  isLoadingGoogleSheets: false,
-  googleSheetsError: null,
-  lastGoogleSheetsSync: null,
+  isLoading: false,
+  error: null,
 
   addDocument: (document) => {
     const newDocument: Document = {
@@ -139,44 +137,62 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     return documents.filter((doc) => ids.includes(doc.id));
   },
 
-  loadGoogleSheetsData: async () => {
-    set({ isLoadingGoogleSheets: true, googleSheetsError: null });
-
+  loadDocumentsFromGoogleSheets: async () => {
+    set({ isLoading: true, error: null });
     try {
-      const googleSheetsDocuments = await fetchDocumentsFromGoogleSheets();
-
-      if (googleSheetsDocuments.length > 0) {
-        const convertedDocuments = googleSheetsDocuments.map((doc, index) =>
-          convertGoogleSheetToDocument(doc, index)
-        );
-
-        set((state) => ({
-          documents: [
-            ...state.documents.filter(doc => !doc.isFromGoogleSheets), // Keep local documents
-            ...convertedDocuments, // Add Google Sheets documents
-          ],
-          isLoadingGoogleSheets: false,
-          lastGoogleSheetsSync: new Date(),
-        }));
-
-        console.log(`Loaded ${convertedDocuments.length} documents from Google Sheets`);
-      } else {
-        set({
-          isLoadingGoogleSheets: false,
-          googleSheetsError: "No data found in Google Sheets or sheet is not publicly accessible"
-        });
+      // Try API method first, fallback to CSV method
+      let googleSheetsDocuments;
+      try {
+        googleSheetsDocuments = await fetchDocumentsFromGoogleSheetsAPI();
+      } catch (apiError) {
+        console.warn('API method failed, trying CSV method:', apiError);
+        googleSheetsDocuments = await fetchDocumentsFromGoogleSheets();
       }
+      
+      // Merge with existing documents, avoiding duplicates
+      const existingDocs = get().documents;
+      const mergedDocuments = [...existingDocs];
+      
+      googleSheetsDocuments.forEach((gsDoc) => {
+        const existingIndex = existingDocs.findIndex(doc => doc.agendaNo === gsDoc.agendaNo);
+        if (existingIndex === -1) {
+          mergedDocuments.push(gsDoc);
+        } else {
+          // Update existing document with Google Sheets data
+          mergedDocuments[existingIndex] = {
+            ...mergedDocuments[existingIndex],
+            sender: gsDoc.sender,
+            perihal: gsDoc.perihal,
+          };
+        }
+      });
+      
+      set({ documents: mergedDocuments, isLoading: false });
     } catch (error) {
-      console.error('Error loading Google Sheets data:', error);
-      set({
-        isLoadingGoogleSheets: false,
-        googleSheetsError: error instanceof Error ? error.message : "Failed to load Google Sheets data"
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to load documents from Google Sheets',
+        isLoading: false 
       });
     }
   },
 
-  syncWithGoogleSheets: async () => {
-    const { loadGoogleSheetsData } = get();
-    await loadGoogleSheetsData();
+  refreshDocuments: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      // Try API method first, fallback to CSV method
+      let googleSheetsDocuments;
+      try {
+        googleSheetsDocuments = await fetchDocumentsFromGoogleSheetsAPI();
+      } catch (apiError) {
+        console.warn('API method failed, trying CSV method:', apiError);
+        googleSheetsDocuments = await fetchDocumentsFromGoogleSheets();
+      }
+      set({ documents: googleSheetsDocuments, isLoading: false });
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to refresh documents from Google Sheets',
+        isLoading: false 
+      });
+    }
   },
 }));

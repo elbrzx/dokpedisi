@@ -24,8 +24,9 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-t-lg shadow-lg w-full max-h-[80vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+      <div className="relative bg-white rounded-t-lg shadow-lg w-full max-h-[85vh] flex flex-col">
+        {/* Header - Fixed */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10">
           <h2 className="text-lg font-semibold text-gray-900">
             Document Details
           </h2>
@@ -37,7 +38,8 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
           </button>
         </div>
 
-        <div className="p-4 space-y-4">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Agenda Number */}
           <div className="flex items-center gap-3">
             <FileText className="h-5 w-5 text-orange-600" />
@@ -49,10 +51,10 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
             </div>
           </div>
 
-          {/* Subject */}
+          {/* Perihal */}
           <div>
-            <p className="text-xs text-gray-500 mb-1">Subject</p>
-            <p className="text-sm text-gray-900">{document.subject}</p>
+            <p className="text-xs text-gray-500 mb-1">Perihal</p>
+            <p className="text-sm text-gray-900">{document.perihal}</p>
           </div>
 
           {/* Sender */}
@@ -107,6 +109,23 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
                   hour: "2-digit",
                   minute: "2-digit",
                 }).format(document.createdAt)}
+              </p>
+            </div>
+          </div>
+
+          {/* Data Source */}
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 flex items-center justify-center">
+              {document.isFromGoogleSheets ? (
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              ) : (
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Data Source</p>
+              <p className="text-sm text-gray-900">
+                {document.isFromGoogleSheets ? "Google Sheets" : "Local System"}
               </p>
             </div>
           </div>

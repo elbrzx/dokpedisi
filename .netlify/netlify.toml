@@ -1,0 +1,44 @@
+functionsDirectory = "/Users/elbruz/AiBOT/git_repository/Dokpedisi/netlify/functions"
+functionsDirectoryOrigin = "config-v1"
+redirectsOrigin = "config"
+plugins = []
+headers = []
+
+[build]
+publish = "/Users/elbruz/AiBOT/git_repository/Dokpedisi/dist/spa"
+publishOrigin = "config"
+commandOrigin = "config"
+command = "npm run build:client"
+functions = "/Users/elbruz/AiBOT/git_repository/Dokpedisi/netlify/functions"
+
+[build.environment]
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[functions]
+
+[functions."*"]
+node_bundler = "esbuild"
+external_node_modules = ["express"]
+
+[[redirects]]
+from = "/api/*"
+to = "/.netlify/functions/api/:splat"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]

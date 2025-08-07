@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { Search, Filter, FileText, Hash, User, RefreshCw, Download, AlertCircle } from "lucide-react";
+import { Search, Filter, FileText, Hash, User, RefreshCw, AlertCircle } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
 import { cn } from "../lib/utils";
 import DocumentDetail from "../components/DocumentDetail";
 
 const DocumentList: React.FC = () => {
-  const {
-    documents,
-    isLoadingGoogleSheets,
-    googleSheetsError,
-    lastGoogleSheetsSync,
-    loadGoogleSheetsData,
-    syncWithGoogleSheets
+  const { 
+    documents, 
+    isLoading, 
+    error, 
+    loadDocumentsFromGoogleSheets, 
+    refreshDocuments 
   } = useDocumentStore();
-
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"status" | "agenda">("status");
   const [filterValue, setFilterValue] = useState<string>("all");
@@ -22,10 +20,10 @@ const DocumentList: React.FC = () => {
   );
   const [showDocumentDetail, setShowDocumentDetail] = useState(false);
 
-  // Load Google Sheets data on component mount
+  // Load documents from Google Sheets on component mount
   useEffect(() => {
-    loadGoogleSheetsData();
-  }, [loadGoogleSheetsData]);
+    loadDocumentsFromGoogleSheets();
+  }, [loadDocumentsFromGoogleSheets]);
 
   const filteredDocuments = documents.filter((doc) => {
     const matchesSearch =
@@ -53,6 +51,9 @@ const DocumentList: React.FC = () => {
 
     return matchesSearch && matchesFilter;
   });
+
+  // Limit to 50 documents to avoid loading issues
+  const limitedDocuments = filteredDocuments.slice(0, 50);
 
   const positions = [...new Set(documents.map((doc) => doc.position))];
   const agendaNumbers = [...new Set(documents.map((doc) => doc.agendaNo))];
@@ -105,12 +106,41 @@ const DocumentList: React.FC = () => {
 
   return (
     <div className="p-4 space-y-4">
+      {/* Header with refresh button */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-900">Daftar Dokumen</h1>
+        <button
+          onClick={refreshDocuments}
+          disabled={isLoading}
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="h-4 w-4 text-red-500" />
+          <span className="text-sm text-red-700">{error}</span>
+        </div>
+      )}
+
+      {/* Loading indicator */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-8">
+          <RefreshCw className="h-6 w-6 animate-spin text-orange-500" />
+          <span className="ml-2 text-sm text-gray-600">Loading documents from Google Sheets...</span>
+        </div>
+      )}
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Search documents, agenda, subject, or recipients..."
+          placeholder="Search documents, No Agenda, Perihal, or recipients..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
@@ -130,18 +160,6 @@ const DocumentList: React.FC = () => {
         >
           <User className="h-4 w-4" />
           Filter by Status
-        </button>
-        <button
-          onClick={() => handleFilterTypeChange("agenda")}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
-            filterType === "agenda"
-              ? "bg-orange-100 text-orange-800 border border-orange-200"
-              : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200",
-          )}
-        >
-          <Hash className="h-4 w-4" />
-          Filter by Agenda/Subject
         </button>
       </div>
 
@@ -175,12 +193,12 @@ const DocumentList: React.FC = () => {
                 </option>
               ))}
             </optgroup>
-            <optgroup label="Subjects">
-              {subjects.map((subject) => (
-                <option key={`subject-${subject}`} value={subject}>
-                  {subject.length > 30
-                    ? `${subject.substring(0, 30)}...`
-                    : subject}
+            <optgroup label="Perihal">
+              {perihals.map((perihal) => (
+                <option key={`perihal-${perihal}`} value={perihal}>
+                  {perihal.length > 30
+                    ? `${perihal.substring(0, 30)}...`
+                    : perihal}
                 </option>
               ))}
             </optgroup>
@@ -190,7 +208,12 @@ const DocumentList: React.FC = () => {
 
       {/* Document Count */}
       <div className="text-xs text-gray-600">
-        {filteredDocuments.length} of {documents.length} documents
+        Showing {limitedDocuments.length} of {filteredDocuments.length} documents
+        {filteredDocuments.length > 50 && (
+          <span className="ml-2 text-orange-600">
+            • Limited to 50 for performance
+          </span>
+        )}
         {filterType === "agenda" && filterValue !== "all" && (
           <span className="ml-2 text-orange-600">
             • Filtered by: {filterValue}
@@ -200,13 +223,13 @@ const DocumentList: React.FC = () => {
 
       {/* Document List */}
       <div className="space-y-2">
-        {filteredDocuments.length === 0 ? (
+        {limitedDocuments.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <FileText className="h-12 w-12 mx-auto mb-2 text-gray-300" />
             <p className="text-sm">No documents found</p>
           </div>
         ) : (
-          filteredDocuments.map((document) => (
+          limitedDocuments.map((document) => (
             <div
               key={document.id}
               onClick={() => handleDocumentClick(document)}
@@ -216,7 +239,7 @@ const DocumentList: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-medium text-orange-600">
-                      {document.agendaNo}
+                      No: {document.agendaNo}
                     </span>
                     <span
                       className={cn(
@@ -234,7 +257,7 @@ const DocumentList: React.FC = () => {
                     )}
                   </div>
                   <h3 className="text-sm font-medium text-gray-900 truncate">
-                    {document.subject}
+                    Perihal: {document.perihal}
                   </h3>
                   <p className="text-xs text-gray-600 mt-1">
                     From: {document.sender}
