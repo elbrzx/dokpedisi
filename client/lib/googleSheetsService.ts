@@ -179,31 +179,8 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<{
   }
 }
 
-// Convert signature canvas data to low-resolution JPEG
-export function convertSignatureToLowResJPEG(signatureDataUrl: string): string {
-  try {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-
-    // Set low resolution for smaller file size
-    canvas.width = 200;
-    canvas.height = 100;
-
-    const img = new Image();
-    img.onload = () => {
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      }
-    };
-    img.src = signatureDataUrl;
-
-    // Convert to JPEG with low quality for smaller size
-    return canvas.toDataURL("image/jpeg", 0.3);
-  } catch (error) {
-    console.error("Error converting signature to low-res JPEG:", error);
-    return signatureDataUrl;
-  }
-}
+// No longer needed, the signature is now generated as PNG in the component
+// and sent directly to the backend for upload.
 
 // Update spreadsheet with expedition data by calling the backend endpoint
 export async function updateSpreadsheetWithExpedition(

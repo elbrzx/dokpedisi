@@ -3,10 +3,7 @@ import { Search, X, Save, Trash2 } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
 import { useToast } from "../lib/toastContext";
 import { cn } from "../lib/utils";
-import {
-  updateSpreadsheetWithExpedition,
-  convertSignatureToLowResJPEG,
-} from "../lib/googleSheetsService";
+import { updateSpreadsheetWithExpedition } from "../lib/googleSheetsService";
 import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useNavigationGuard } from "../App";
@@ -211,10 +208,10 @@ const Expedition: React.FC = () => {
     contextRef.current.closePath();
     setIsDrawing(false);
 
-    // Save signature as base64 only if it's not blank
+    // Save signature as base64 PNG if it's not blank
     const canvas = canvasRef.current;
     if (canvas && !isCanvasBlank(canvas)) {
-      setSignature(canvas.toDataURL());
+      setSignature(canvas.toDataURL("image/png"));
     } else {
       setSignature(""); // Ensure signature is empty if canvas is blank
     }
@@ -256,25 +253,35 @@ const Expedition: React.FC = () => {
     }
 
     try {
-      // Process each selected document
-      for (const document of selectedDocuments) {
-        // Convert signature to low-res JPG if available
-        let processedSignature = "";
-        if (signature) {
-          processedSignature = convertSignatureToLowResJPEG(signature);
+      let signatureUrl = "";
+      if (signature) {
+        // 1. Upload signature to Supabase via our backend
+        const uploadResponse = await fetch("/api/upload-signature", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: signature }),
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload signature.");
         }
 
-        // Construct expedition details from form data
+        const { url } = await uploadResponse.json();
+        signatureUrl = url;
+      }
+
+      // 2. Process each selected document
+      for (const document of selectedDocuments) {
         const expeditionDetails = `Diterima pada ${date} jam ${time}. Catatan: ${
           notes.trim() || "-"
         }`;
 
-        // Update expedition data in Google Sheets
+        // 3. Update expedition data in Google Sheets with the new URL
         const success = await updateSpreadsheetWithExpedition(
           document.agendaNo,
           expeditionDetails, // lastExpedition
           recipient.trim(), // currentLocation
-          processedSignature,
+          signatureUrl, // Now this is a URL or empty string
         );
 
         if (!success) {
