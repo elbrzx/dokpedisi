@@ -3,7 +3,10 @@ import { Search, X, Save, Trash2 } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
 import { useToast } from "../lib/toastContext";
 import { cn } from "../lib/utils";
-import { updateSpreadsheetWithExpedition } from "../lib/googleSheetsService";
+import {
+  updateSpreadsheetWithExpedition,
+  convertSignatureToLowResJPEG,
+} from "../lib/googleSheetsService";
 import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useNavigationGuard } from "../App";
@@ -211,12 +214,10 @@ const Expedition: React.FC = () => {
     contextRef.current.closePath();
     setIsDrawing(false);
 
-    // Save signature as base64 PNG if it's not blank
+    // Save signature as base64
     const canvas = canvasRef.current;
-    if (canvas && !isCanvasBlank(canvas)) {
-      setSignature(canvas.toDataURL("image/png"));
-    } else {
-      setSignature(""); // Ensure signature is empty if canvas is blank
+    if (canvas) {
+      setSignature(canvas.toDataURL());
     }
   };
 
@@ -256,39 +257,26 @@ const Expedition: React.FC = () => {
     }
 
     try {
-      let signatureUrl = "";
-      if (signature) {
-        console.log("Submitting signature:", {
-          imageSize: signature.length,
-          isCanvasBlank: isCanvasBlank(canvasRef.current),
-        });
-        // 1. Upload signature to Supabase via our backend
-        const uploadResponse = await fetch("/api/upload-signature", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: signature }),
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error("Failed to upload signature.");
+      // Process each selected document
+      for (const document of selectedDocuments) {
+        // Convert signature to low-res JPG if available
+        let processedSignature = "";
+        if (signature && !isCanvasBlank(canvasRef.current)) {
+          processedSignature = convertSignatureToLowResJPEG(signature);
         }
 
-        const { url } = await uploadResponse.json();
-        signatureUrl = url;
-      }
-
-      // 2. Process each selected document
-      for (const document of selectedDocuments) {
+        // Construct expedition details from form data
         const expeditionDetails = `Diterima pada ${date} jam ${time}. Catatan: ${
           notes.trim() || "-"
         }`;
 
-        // 3. Update expedition data in Google Sheets with the new URL
+        // Update expedition data in Google Sheets
         const success = await updateSpreadsheetWithExpedition(
           document.agendaNo,
           expeditionDetails, // lastExpedition
           recipient.trim(), // currentLocation
-          signatureUrl, // Now this is a URL or empty string
+          "Accepted", // status
+          processedSignature,
         );
 
         if (!success) {

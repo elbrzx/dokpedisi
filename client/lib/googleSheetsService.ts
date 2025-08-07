@@ -82,9 +82,9 @@ function convertRowToDocument(
   index: number,
 ): GoogleSheetDocument | null {
   try {
-    // Updated mapping based on requirements:
+    // Mapping based on requirements:
     // agendaNo = row [0]
-    // createdAt = row [2]
+    // createdAt = row [2] (TANGGAL TERIMA)
     // sender = row [3]
     // subject = row [4]
     // lastExpedition = row [5]
@@ -99,13 +99,20 @@ function convertRowToDocument(
     const currentLocation = row[6]?.trim() || undefined;
     const signature = row[8]?.trim() || undefined;
 
-    // Try to parse the date, fallback to now
-    let createdAt = new Date();
+    // Robust date parsing for "DD-MM-YYYY" or "MM/DD/YYYY"
+    let createdAt = new Date(); // Fallback
     if (dateString) {
-      // Handles "MM/DD/YYYY" and other common formats
-      const parsedDate = Date.parse(dateString);
-      if (!isNaN(parsedDate)) {
-        createdAt = new Date(parsedDate);
+      const parts = dateString.split(/[\/\-]/);
+      if (parts.length === 3) {
+        // Assuming MM/DD/YYYY or DD-MM-YYYY. Let's try MM/DD/YYYY first as it's more common with Date.parse
+        let parsedDate = Date.parse(`${parts[0]}/${parts[1]}/${parts[2]}`);
+        if (isNaN(parsedDate)) {
+          // if that fails, try DD/MM/YYYY
+          parsedDate = Date.parse(`${parts[1]}/${parts[0]}/${parts[2]}`);
+        }
+        if (!isNaN(parsedDate)) {
+          createdAt = new Date(parsedDate);
+        }
       }
     }
 
@@ -175,14 +182,38 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<{
   }
 }
 
-// No longer needed, the signature is now generated as PNG in the component
-// and sent directly to the backend for upload.
+// Convert signature canvas data to low-resolution JPEG
+export function convertSignatureToLowResJPEG(signatureDataUrl: string): string {
+  try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Set low resolution for smaller file size
+    canvas.width = 200;
+    canvas.height = 100;
+
+    const img = new Image();
+    img.onload = () => {
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      }
+    };
+    img.src = signatureDataUrl;
+
+    // Convert to JPEG with low quality for smaller size
+    return canvas.toDataURL("image/jpeg", 0.3);
+  } catch (error) {
+    console.error("Error converting signature to low-res JPEG:", error);
+    return signatureDataUrl;
+  }
+}
 
 // Update spreadsheet with expedition data by calling the backend endpoint
 export async function updateSpreadsheetWithExpedition(
   agendaNo: string,
   lastExpedition: string,
   currentLocation: string,
+  status: string,
   signature?: string,
 ): Promise<boolean> {
   try {
