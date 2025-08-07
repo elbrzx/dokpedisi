@@ -3,7 +3,6 @@ import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import { handleUpdateSheet } from "./routes/update-sheet";
-import { handleUploadSignature } from "./routes/upload-signature";
 
 export function createServer() {
   const app = express();
@@ -23,9 +22,6 @@ export function createServer() {
 
   // Google Sheets update route
   app.post("/api/update-sheet", handleUpdateSheet);
-
-  // Signature upload route
-  app.post("/api/upload-signature", handleUploadSignature);
 
   return app;
 }
