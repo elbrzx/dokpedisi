@@ -73,47 +73,42 @@ import { Document } from "./documentStore"; // Import the main Document type
 // This function now transforms a raw sheet row into a rich Document object
 function convertRowToDocument(row: string[], index: number): Document | null {
   try {
-    // New Mapping:
+    // Corrected Mapping:
     // No Agenda = row[0]
-    // Sender=row[2]
-    // Subject=[3]
-    // Tanggal = row[4]
-    // Status = row[5]
+    // Tanggal = row[1] (D/MM/YYYY)
+    // Sender = row[2]
+    // Perihal = row[3]
+    // Status = row[5] (Not used directly, derived from history)
     // History starts at row[6]
 
     const agendaNo = row[0]?.trim();
-    const sender = row[2]?.trim();
-    const perihal = row[3]?.trim();
-    const dateString = row[4]?.trim();
-    const status = row[5]?.trim() || "Pending";
+    const dateString = row[1]?.trim(); // Read from Column B
+    const sender = row[2]?.trim(); // Read from Column C
+    const perihal = row[3]?.trim(); // Read from Column D
 
-    // Only create document if we have the required fields
     if (!agendaNo || !sender || !perihal) {
       return null;
     }
 
-    // Use the robust date parsing logic from the previous implementation
-    const monthMap: { [key: string]: number } = {
-        jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, jun: 5,
-        jul: 6, agu: 7, sep: 8, okt: 9, nov: 10, des: 11,
-    };
-    let createdAt = new Date();
+    // Robustly parse D/MM/YYYY format from Column B
+    let createdAt = new Date(0); // Default to epoch to prevent invalid dates
     if (dateString) {
-      const parts = dateString.replace(/\s+/g, "").split(/[\/\-]/);
+      const parts = dateString.split("/");
       if (parts.length === 3) {
         const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
         const year = parseInt(parts[2], 10);
-        let month = -1;
-        const monthStr = parts[1].toLowerCase().substring(0, 3);
-        if (monthMap[monthStr] !== undefined) month = monthMap[monthStr];
-        else month = parseInt(parts[1], 10) - 1;
-        if (!isNaN(day) && !isNaN(year) && month > -1) {
-          createdAt = new Date(Date.UTC(year, month, day));
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+          const parsedDate = new Date(Date.UTC(year, month, day));
+          // Check if the parsed date is valid before assigning
+          if (!isNaN(parsedDate.getTime())) {
+            createdAt = parsedDate;
+          }
         }
       }
     }
 
-    // Parse the wide expedition history
+    // This part of the logic for parsing history remains the same
     const expeditionHistory: any[] = [];
     for (let i = 6; i < row.length; i += 3) {
       const details = row[i]?.trim();
@@ -136,7 +131,7 @@ function convertRowToDocument(row: string[], index: number): Document | null {
         const timestamp = new Date(Date.UTC(year, month, day));
 
         expeditionHistory.push({
-          timestamp: timestamp, // Now a proper Date object
+          timestamp: !isNaN(timestamp.getTime()) ? timestamp : new Date(0),
           recipient,
           signature: signature || undefined,
           notes: notes,
@@ -147,7 +142,10 @@ function convertRowToDocument(row: string[], index: number): Document | null {
       }
     }
 
-    const lastHistoryEntry = expeditionHistory.length > 0 ? expeditionHistory[expeditionHistory.length - 1] : null;
+    const lastHistoryEntry =
+      expeditionHistory.length > 0
+        ? expeditionHistory[expeditionHistory.length - 1]
+        : null;
 
     // Determine status and latest expedition details
     const currentStatus = expeditionHistory.length > 0 ? "Signed" : "Unknown";
@@ -156,20 +154,18 @@ function convertRowToDocument(row: string[], index: number): Document | null {
     const lastExpedition = lastHistoryEntry?.details;
     const signature = lastHistoryEntry?.signature;
 
-
     return {
       id: `${agendaNo}-${index}`,
       agendaNo,
       sender,
       perihal,
       createdAt,
-      position: currentStatus, // Use the new dynamic status
+      position: currentStatus,
       expeditionHistory,
       currentRecipient,
       lastExpedition,
       signature,
       isFromGoogleSheets: true,
-      // Add new fields for the UI
       tanggalTerima,
       currentStatus,
     };
