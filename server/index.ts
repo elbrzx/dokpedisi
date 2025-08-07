@@ -25,12 +25,3 @@ export function createServer() {
 
   return app;
 }
-
-// Start the server if run directly
-if (process.env.NODE_ENV !== "test") {
-  const port = process.env.PORT || 3001;
-  const app = createServer();
-  app.listen(port, () => {
-    console.log(`Server listening at http://localhost:${port}`);
-  });
-}
