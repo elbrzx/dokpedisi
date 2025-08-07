@@ -44,7 +44,7 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
         {/* Content - Scrollable */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div>
-            <p className="text-xs text-gray-500">Agenda Number</p>
+            <p className="text-xs text-gray-500">No Agenda</p>
             <p className="text-sm font-medium text-gray-900">
               {document.agendaNo}
             </p>
@@ -64,12 +64,12 @@ const DocumentDetail: React.FC<DocumentDetailProps> = ({
             <p className="text-xs text-gray-500 mb-1">Current Status</p>
             <span
               className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                document.position.toLowerCase() === "diterima"
+                document.currentStatus?.toLowerCase() === "signed"
                   ? "bg-green-100 text-green-800"
                   : "bg-orange-100 text-orange-800"
               }`}
             >
-              {document.position}
+              {document.currentStatus || "Unknown"}
             </span>
           </div>
 

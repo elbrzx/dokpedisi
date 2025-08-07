@@ -69,21 +69,6 @@ async function fetchEntireSheet(
 
 import { Document } from "./documentStore"; // Import the main Document type
 
-// This interface now represents the raw row data, which will be transformed.
-export interface GoogleSheetRow {
-  agendaNo: string; // row[0]
-  sender: string; // row[2]
-  perihal: string; // row[3]
-  createdAt: Date; // row[4]
-  status: string; // row[5]
-  expeditionHistory: Array<{
-    details: string; // e.g., "Diterima pada..."
-    recipient: string;
-    signature?: string;
-    timestamp: string; // Keep as string from sheet, can be parsed later
-  }>;
-  currentRecipient?: string;
-}
 
 // This function now transforms a raw sheet row into a rich Document object
 function convertRowToDocument(row: string[], index: number): Document | null {
@@ -136,7 +121,6 @@ function convertRowToDocument(row: string[], index: number): Document | null {
       const signature = row[i + 2]?.trim();
 
       if (details && recipient) {
-        // Parse date and notes from the "details" string
         const notesMatch = details.match(/Catatan: (.*)/);
         const notes =
           notesMatch && notesMatch[1] !== "-" ? notesMatch[1] : null;
@@ -145,19 +129,33 @@ function convertRowToDocument(row: string[], index: number): Document | null {
           .replace("Diterima pada ", "");
         const [datePart] = dateTimeString.split(" jam ");
 
+        const dateParts = datePart.split("-");
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1;
+        const day = parseInt(dateParts[2], 10);
+        const timestamp = new Date(Date.UTC(year, month, day));
+
         expeditionHistory.push({
-          timestamp: datePart, // This will be a YYYY-MM-DD string
+          timestamp: timestamp, // Now a proper Date object
           recipient,
           signature: signature || undefined,
           notes: notes,
+          details: details,
         });
       } else {
-        // Stop when we find the first empty slot
         break;
       }
     }
 
-    const currentRecipient = expeditionHistory.length > 0 ? expeditionHistory[expeditionHistory.length - 1].recipient : undefined;
+    const lastHistoryEntry = expeditionHistory.length > 0 ? expeditionHistory[expeditionHistory.length - 1] : null;
+
+    // Determine status and latest expedition details
+    const currentStatus = expeditionHistory.length > 0 ? "Signed" : "Unknown";
+    const currentRecipient = lastHistoryEntry?.recipient;
+    const tanggalTerima = lastHistoryEntry?.timestamp;
+    const lastExpedition = lastHistoryEntry?.details;
+    const signature = lastHistoryEntry?.signature;
+
 
     return {
       id: `${agendaNo}-${index}`,
@@ -165,10 +163,15 @@ function convertRowToDocument(row: string[], index: number): Document | null {
       sender,
       perihal,
       createdAt,
-      position: status, // 'position' is used in the store for status
+      position: currentStatus, // Use the new dynamic status
       expeditionHistory,
       currentRecipient,
+      lastExpedition,
+      signature,
       isFromGoogleSheets: true,
+      // Add new fields for the UI
+      tanggalTerima,
+      currentStatus,
     };
   } catch (error) {
     console.error(`Error converting row ${index}:`, error);
@@ -216,29 +219,32 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<{
 }
 
 // Convert signature canvas data to low-resolution JPEG
-export function convertSignatureToLowResJPEG(signatureDataUrl: string): string {
-  try {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+export function convertSignatureToLowResJPEG(
+  signatureDataUrl: string,
+): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(signatureDataUrl);
 
-    // Set low resolution for smaller file size
-    canvas.width = 200;
-    canvas.height = 100;
+      canvas.width = 200;
+      canvas.height = 100;
 
-    const img = new Image();
-    img.onload = () => {
-      if (ctx) {
+      const img = new Image();
+      img.onload = () => {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      }
-    };
-    img.src = signatureDataUrl;
-
-    // Convert to JPEG with low quality for smaller size
-    return canvas.toDataURL("image/jpeg", 0.3);
-  } catch (error) {
-    console.error("Error converting signature to low-res JPEG:", error);
-    return signatureDataUrl;
-  }
+        resolve(canvas.toDataURL("image/jpeg", 0.3));
+      };
+      img.onerror = () => {
+        resolve(signatureDataUrl); // Fallback to original on error
+      };
+      img.src = signatureDataUrl;
+    } catch (error) {
+      console.error("Error converting signature:", error);
+      resolve(signatureDataUrl); // Fallback to original on error
+    }
+  });
 }
 
 // Update spreadsheet with expedition data by calling the backend endpoint

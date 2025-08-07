@@ -12,15 +12,19 @@ export interface Document {
   position: string;
   createdAt: Date;
   expeditionHistory: Array<{
-    timestamp: string;
+    timestamp: Date;
     recipient: string;
     signature?: string;
     notes?: string;
+    details?: string;
   }>;
   currentRecipient?: string;
   isFromGoogleSheets?: boolean;
   lastExpedition?: string;
   signature?: string;
+  // New fields for the redesigned UI
+  tanggalTerima?: Date;
+  currentStatus?: string;
 }
 
 export interface ExpeditionRecord {

@@ -68,12 +68,12 @@ const DocumentList: React.FC = () => {
     }
   };
 
-  const getPositionColor = (position: string) => {
-    switch (position.toLowerCase()) {
-      case "pending":
-        return "bg-orange-100 text-orange-800";
-      case "diterima":
+  const getPositionColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "signed":
         return "bg-green-100 text-green-800";
+      case "unknown":
+        return "bg-orange-100 text-orange-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -183,73 +183,61 @@ const DocumentList: React.FC = () => {
             <div
               key={document.id}
               onClick={() => handleDocumentClick(document)}
-              className="bg-white rounded-lg border border-gray-200 p-4 space-y-3 cursor-pointer hover:bg-gray-50 transition-colors"
+              className="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:bg-gray-50 transition-colors"
             >
-              {/* Header with Agenda and Status */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                    {document.agendaNo}
-                  </span>
-                  <span
-                    className={cn(
-                      "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
-                      getPositionColor(document.position),
-                    )}
-                  >
-                    {document.position}
-                  </span>
-                  {document.expeditionHistory.length > 0 && (
-                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                      {document.expeditionHistory.length} expedition
-                      {document.expeditionHistory.length > 1 ? "s" : ""}
-                    </span>
-                  )}
-                </div>
-                <div className="text-xs text-gray-500 flex items-center gap-1">
+              {/* Top Row: Agenda No and Date */}
+              <div className="flex justify-between items-start mb-2">
+                <span className="font-bold text-sm text-orange-600">
+                  No. Agenda: {document.agendaNo}
+                </span>
+                <span className="text-xs text-gray-500 flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   {format(document.createdAt, "d MMM yyyy", { locale: id })}
-                </div>
+                </span>
               </div>
 
-              {/* Document Details */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-900 leading-tight">
+              {/* Middle section: Perihal and Sender */}
+              <div className="mb-3">
+                <p className="text-xs text-gray-500">Perihal:</p>
+                <h3 className="text-sm font-semibold text-gray-800 leading-tight">
                   {document.perihal}
                 </h3>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-gray-500">From:</span>
-                    <span className="ml-1 text-gray-900 font-medium block">
-                      {document.sender}
-                    </span>
-                  </div>
-                  {document.currentRecipient && (
-                    <div>
-                      <span className="text-gray-500">Current Location:</span>
-                      <span className="ml-1 text-green-700 font-medium block">
-                        {document.currentRecipient}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {document.lastExpedition && (
-                  <div className="text-xs">
-                    <span className="text-gray-500">Last Expedition:</span>
-                    <span className="ml-1 text-gray-700">
-                      {document.lastExpedition}
-                    </span>
-                  </div>
-                )}
+              </div>
+              <div className="mb-3">
+                <p className="text-xs text-gray-500">Sender:</p>
+                <p className="text-sm text-gray-800">{document.sender}</p>
               </div>
 
-              {/* Signature indicator */}
-              {document.signature && (
-                <div className="flex items-center gap-1 text-xs text-purple-600">
-                  <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                  <span>Signed</span>
+              {/* Bottom Row: Status and Location */}
+              <div className="border-t border-gray-100 pt-2 grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <p className="text-gray-500">Current Status</p>
+                  <span
+                    className={cn(
+                      "inline-flex items-center px-2 py-0.5 rounded-full font-medium",
+                      getPositionColor(document.currentStatus || "Unknown"),
+                    )}
+                  >
+                    {document.currentStatus}
+                  </span>
                 </div>
-              )}
+                <div>
+                  <p className="text-gray-500">Current Position</p>
+                  <p className="font-medium text-gray-800">
+                    {document.currentRecipient || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Tanggal Terima</p>
+                  <p className="font-medium text-gray-800">
+                    {document.tanggalTerima
+                      ? format(document.tanggalTerima, "d MMM yyyy", {
+                          locale: id,
+                        })
+                      : "-"}
+                  </p>
+                </div>
+              </div>
             </div>
           ))
         )}
