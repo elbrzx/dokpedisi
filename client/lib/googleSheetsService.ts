@@ -148,7 +148,11 @@ function convertRowToDocument(row: string[], index: number): Document | null {
     }
 
     const lastHistoryEntry = expeditionHistory.length > 0 ? expeditionHistory[expeditionHistory.length - 1] : null;
+
+    // Determine status and latest expedition details
+    const currentStatus = expeditionHistory.length > 0 ? "Signed" : "Unknown";
     const currentRecipient = lastHistoryEntry?.recipient;
+    const tanggalTerima = lastHistoryEntry?.timestamp;
     const lastExpedition = lastHistoryEntry?.details;
     const signature = lastHistoryEntry?.signature;
 
@@ -159,12 +163,15 @@ function convertRowToDocument(row: string[], index: number): Document | null {
       sender,
       perihal,
       createdAt,
-      position: status,
+      position: currentStatus, // Use the new dynamic status
       expeditionHistory,
       currentRecipient,
       lastExpedition,
       signature,
       isFromGoogleSheets: true,
+      // Add new fields for the UI
+      tanggalTerima,
+      currentStatus,
     };
   } catch (error) {
     console.error(`Error converting row ${index}:`, error);

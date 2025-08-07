@@ -22,6 +22,9 @@ export interface Document {
   isFromGoogleSheets?: boolean;
   lastExpedition?: string;
   signature?: string;
+  // New fields for the redesigned UI
+  tanggalTerima?: Date;
+  currentStatus?: string;
 }
 
 export interface ExpeditionRecord {
