@@ -18,13 +18,13 @@ async function getGoogleSheetsClient() {
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
 
-  const client = await auth.getClient();
-  const sheets = google.sheets({ version: "v4", auth: client });
+  const sheets = google.sheets({ version: "v4", auth });
 
   return sheets;
 }
 
 export const handleUpdateSheet: RequestHandler = async (req, res) => {
+  console.log("Received request to update sheet with body:", req.body);
   const { agendaNo, lastExpedition, currentLocation, status, signature } =
     req.body;
 
@@ -63,7 +63,7 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
       spreadsheetId: SPREADSHEET_ID,
       range: `${SHEET_NAME}!F${actualRowNumber}:I${actualRowNumber}`,
       valueInputOption: "RAW",
-      resource: {
+      requestBody: {
         values: [[lastExpedition, currentLocation, status, signature || ""]],
       },
     });
@@ -72,12 +72,12 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
       message: "Sheet updated successfully",
       updatedRange: updateResponse.data.updatedRange,
     });
-  } catch (error) {
-    console.error("Error updating spreadsheet:", error);
+  } catch (error: any) {
+    console.error("Full error object:", JSON.stringify(error, null, 2));
     if (error instanceof Error) {
-        res.status(500).json({ message: "Error updating spreadsheet", error: error.message });
+        res.status(500).json({ message: "Error updating spreadsheet", error: error.message, details: error.stack });
     } else {
-        res.status(500).json({ message: "An unknown error occurred" });
+        res.status(500).json({ message: "An unknown error occurred", details: error });
     }
   }
 };

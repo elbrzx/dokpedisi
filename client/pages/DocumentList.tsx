@@ -86,7 +86,8 @@ const DocumentList: React.FC = () => {
                 Google Sheets Integration
               </p>
               <p className="text-xs text-blue-700">
-                Showing latest 50 of {totalDocumentsCount} total documents (sorted by date, newest first)
+                Showing latest {documents.length} of {totalDocumentsCount} total
+                documents (sorted by date, newest first)
                 {lastGoogleSheetsSync && (
                   <span className="ml-2">
                     • Last sync: {lastGoogleSheetsSync.toLocaleTimeString()}

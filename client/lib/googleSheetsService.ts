@@ -125,9 +125,10 @@ function convertRowToDocument(
 }
 
 // Fetch all document data from Google Sheets
-export async function fetchDocumentsFromGoogleSheets(): Promise<
-  GoogleSheetDocument[]
-> {
+export async function fetchDocumentsFromGoogleSheets(): Promise<{
+  documents: GoogleSheetDocument[];
+  total: number;
+}> {
   try {
     console.log("Fetching documents from Google Sheets...");
 
@@ -136,27 +137,35 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<
       SHEET_CONFIG.sheetName,
     );
 
-    if (rows.length === 0) {
+    const totalRows = rows.length;
+
+    if (totalRows === 0) {
       console.warn("No data rows found in sheet");
-      return [];
+      return { documents: [], total: 0 };
     }
 
-    console.log(`Processing ${rows.length} rows from sheet`);
+    // Get the most recent 500 rows
+    const recentRows = rows.slice(-500);
+    console.log(
+      `Processing most recent ${recentRows.length} rows out of ${totalRows} total`,
+    );
 
     const documents: GoogleSheetDocument[] = [];
 
-    for (let i = 0; i < rows.length; i++) {
-      const doc = convertRowToDocument(rows[i], i);
+    for (let i = 0; i < recentRows.length; i++) {
+      const doc = convertRowToDocument(recentRows[i], i);
       if (doc) {
         documents.push(doc);
       }
     }
 
-    console.log(`Successfully processed ${documents.length} documents from ${rows.length} rows`);
-    return documents;
+    console.log(
+      `Successfully processed ${documents.length} documents from ${totalRows} rows`,
+    );
+    return { documents: documents.reverse(), total: totalRows }; // Reverse to show newest first
   } catch (error) {
     console.error("Error fetching documents from Google Sheets:", error);
-    return [];
+    return { documents: [], total: 0 };
   }
 }
 

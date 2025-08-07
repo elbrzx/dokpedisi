@@ -3,7 +3,10 @@ import { Search, X, Save, Trash2 } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
 import { useToast } from "../lib/toastContext";
 import { cn } from "../lib/utils";
-import { updateExpeditionData, convertSignatureToLowResJPG } from "../lib/googleSheetsService";
+import {
+  updateSpreadsheetWithExpedition,
+  convertSignatureToLowResJPEG,
+} from "../lib/googleSheetsService";
 import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useNavigationGuard } from "../App";
@@ -245,19 +248,22 @@ const Expedition: React.FC = () => {
       // Process each selected document
       for (const document of selectedDocuments) {
         // Convert signature to low-res JPG if available
-        let processedSignature = '';
+        let processedSignature = "";
         if (signature) {
-          processedSignature = await convertSignatureToLowResJPG(signature);
+          processedSignature = convertSignatureToLowResJPEG(signature);
         }
 
+        // Construct expedition details from form data
+        const expeditionDetails = `Dikirim ke ${recipient.trim()} pada ${date} jam ${time}. Catatan: ${notes.trim() || "-"}`;
+
         // Update expedition data in Google Sheets
-        const success = await updateExpeditionData(document.agendaNo, {
-          date: new Date(date),
-          time,
-          recipient: recipient.trim(),
-          notes: notes.trim() || undefined,
-          signature: processedSignature,
-        });
+        const success = await updateSpreadsheetWithExpedition(
+          document.agendaNo,
+          expeditionDetails, // lastExpedition
+          recipient.trim(), // currentLocation
+          "Terkirim", // status
+          processedSignature,
+        );
 
         if (!success) {
           showToast(
