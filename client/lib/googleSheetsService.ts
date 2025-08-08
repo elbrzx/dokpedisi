@@ -1,249 +1,182 @@
-// Enhanced Google Sheets integration service
+// src/google-sheets.ts
+import { Document, ExpeditionEntry } from './types';
+import { parseCSV, fetchWithTimeout } from './csv-utils';
 
 export interface GoogleSheetsConfig {
   spreadsheetId: string;
   sheetName: string;
 }
 
-// Configuration for the provided Google Sheet
-const SHEET_CONFIG: GoogleSheetsConfig = {
-  spreadsheetId: "19FgFYyhgnMmWIVIHK-1cOmgrQIik_j4mqUnLz5aArR4",
-  sheetName: "SURATMASUK",
+/* ------------------------------------------------------------------ */
+/*   Konfigurasi sheet – ganti bila diperlukan                           */
+/* ------------------------------------------------------------------ */
+export const SHEET_CONFIG: GoogleSheetsConfig = {
+  spreadsheetId: '19FgFYyhgnMmWIVIHK-1cOmgrQIik_j4mqUnLz5aArR4',
+  sheetName: 'SURATMASUK',
 };
 
-// Parse CSV data with better handling
-function parseCSV(csvText: string): string[][] {
-  const lines = csvText.split("\n");
-  return lines.map((line) => {
-    const cells = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === "," && !inQuotes) {
-        cells.push(current.trim().replace(/^"|"$/g, ""));
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-    cells.push(current.trim().replace(/^"|"$/g, ""));
-    return cells;
-  });
-}
-
-// Fetch all sheet data at once
+/* ------------------------------------------------------------------ */
+/*   1️⃣  Ambil seluruh CSV dari Google Sheet                           */
+/* ------------------------------------------------------------------ */
 async function fetchEntireSheet(
-  spreadsheetId: string,
-  sheetName: string,
+  { spreadsheetId, sheetName }: GoogleSheetsConfig,
 ): Promise<string[][]> {
-  try {
-    // Use Google Sheets CSV export URL for the entire sheet
-    const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+  const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(
+    sheetName,
+  )}`;
 
-    console.log("Fetching from URL:", url);
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch sheet data: ${response.statusText}`);
-    }
-
-    const csvText = await response.text();
-    const rows = parseCSV(csvText);
-
-    console.log("Raw CSV rows:", rows.length);
-
-    // Filter out completely empty rows and header row
-    return rows.filter((row, index) => {
-      if (index === 0) return false; // Skip header row
-      return row.some((cell) => cell && cell.trim() !== "");
-    });
-  } catch (error) {
-    console.error("Error fetching sheet data:", error);
-    return [];
+  const resp = await fetchWithTimeout(url);
+  if (!resp.ok) {
+    throw new Error(`GET ${url} → ${resp.status} ${resp.statusText}`);
   }
+
+  const csv = await resp.text();
+  const rows = parseCSV(csv);
+
+  // Buang header (baris pertama) dan baris yang semuanya kosong
+  return rows.filter((r, i) => i > 0 && r.some(c => c.trim() !== ''));
 }
 
-import { Document } from "./types"; // Import the main Document type
+/* ------------------------------------------------------------------ */
+/*   2️⃣  Ubah satu baris CSV → objek Document                         */
+/* ------------------------------------------------------------------ */
+function parseDateFromDMY(str: string | undefined): Date {
+  if (!str) return new Date(0);
+  const parts = str.split('/');
+  if (parts.length !== 3) return new Date(0);
 
+  const day = Number(parts[0]);
+  const month = Number(parts[1]) - 1; // 0‑based
+  const year = Number(parts[2]);
 
-// This function now transforms a raw sheet row into a rich Document object
-function convertRowToDocument(row: string[], index: number): Document | null {
-  try {
-    // Corrected Mapping:
-    // No Agenda = row[0]
-    // Tanggal = row[1] (D/MM/YYYY)
-    // Sender = row[2]
-    // Perihal = row[3]
-    // Status = row[5] (Not used directly, derived from history)
-    // History starts at row[6]
+  const d = new Date(Date.UTC(year, month, day));
+  return isNaN(d.getTime()) ? new Date(0) : d;
+}
 
-    const agendaNo = row[0]?.trim();
-    const dateString = row[1]?.trim(); // Read from Column B
-    const sender = row[2]?.trim(); // Read from Column C
-    const perihal = row[3]?.trim(); // Read from Column D
+/** Meng‑parse satu entri “history” yang berada pada kolom 7‑dst. */
+function buildExpeditionHistory(row: string[]): ExpeditionEntry[] {
+  const history: ExpeditionEntry[] = [];
 
-    if (!agendaNo) {
-      return null;
-    }
+  for (let i = 6; i + 2 < row.length; i += 3) {
+    const rawDetails = row[i]?.trim();
+    const recipient = row[i + 1]?.trim();
+    const signature = row[i + 2]?.trim() || undefined;
 
-    // Robustly parse D/MM/YYYY format from Column B
-    let createdAt = new Date(0); // Default to epoch to prevent invalid dates
-    if (dateString) {
-      const parts = dateString.split("/");
-      if (parts.length === 3) {
-        const day = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
-        const year = parseInt(parts[2], 10);
-        if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-          const parsedDate = new Date(Date.UTC(year, month, day));
-          // Check if the parsed date is valid before assigning
-          if (!isNaN(parsedDate.getTime())) {
-            createdAt = parsedDate;
-          }
-        }
-      }
-    }
+    if (!rawDetails || !recipient) break; // tidak ada lagi data yang valid
 
-    // This part of the logic for parsing history remains the same
-    const expeditionHistory: any[] = [];
-    for (let i = 6; i < row.length; i += 3) {
-      const details = row[i]?.trim();
-      const recipient = row[i + 1]?.trim();
-      const signature = row[i + 2]?.trim();
+    // Catatan (opsional)
+    const notesMatch = rawDetails.match(/Catatan:\s*(.*)/);
+    const notes = notesMatch && notesMatch[1] !== '-' ? notesMatch[1] : null;
 
-      if (details && recipient) {
-        const notesMatch = details.match(/Catatan: (.*)/);
-        const notes =
-          notesMatch && notesMatch[1] !== "-" ? notesMatch[1] : null;
-        const dateTimeString = details
-          .split(". Catatan:")[0]
-          .replace("Diterima pada ", "");
-        const [datePart] = dateTimeString.split(" jam ");
+    // Extract tanggal “Diterima pada YYYY-MM-DD …”
+    const datePart = rawDetails
+      .split('. Catatan:')[0]
+      .replace('Diterima pada ', '')
+      .trim()
+      .split(' jam ')[0]; // format “YYYY-MM-DD”
 
-        const dateParts = datePart.split("-");
-        const year = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1;
-        const day = parseInt(dateParts[2], 10);
-        const timestamp = new Date(Date.UTC(year, month, day));
+    const [y, m, d] = datePart.split('-').map(Number);
+    const ts = new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1));
 
-        expeditionHistory.push({
-          timestamp: !isNaN(timestamp.getTime()) ? timestamp : new Date(0),
-          recipient,
-          signature: signature || undefined,
-          notes: notes,
-          details: details,
-        });
-      } else {
-        break;
-      }
-    }
-
-    const lastHistoryEntry =
-      expeditionHistory.length > 0
-        ? expeditionHistory[expeditionHistory.length - 1]
-        : null;
-
-    // Determine status and latest expedition details
-    const currentStatus = expeditionHistory.length > 0 ? "Signed" : "Unknown";
-    const currentRecipient = lastHistoryEntry?.recipient;
-    const tanggalTerima = lastHistoryEntry?.timestamp;
-    const lastExpedition = lastHistoryEntry?.details;
-    const signature = lastHistoryEntry?.signature;
-
-    return {
-      id: `${agendaNo}-${index}`,
-      agendaNo,
-      sender,
-      perihal,
-      createdAt,
-      position: currentStatus,
-      expeditionHistory,
-      currentRecipient,
-      lastExpedition,
+    history.push({
+      timestamp: isNaN(ts.getTime()) ? new Date(0) : ts,
+      recipient,
       signature,
-      isFromGoogleSheets: true,
-      tanggalTerima,
-      currentStatus,
-    };
-  } catch (error) {
-    console.error(`Error converting row ${index}:`, error);
-    return null;
+      notes,
+      details: rawDetails,
+    });
   }
+
+  return history;
 }
 
+/** Convert satu baris menjadi Document. Mengembalikan `null` bila data tidak valid. */
+function convertRowToDocument(row: string[], index: number): Document | null {
+  const agendaNo = row[0]?.trim();
+  if (!agendaNo) return null; // baris tanpa agenda tidak diproses
 
-// This function now returns fully processed Document objects
+  const createdAt = parseDateFromDMY(row[1]);
+  const sender = row[2]?.trim() ?? '';
+  const perihal = row[3]?.trim() ?? '';
+
+  const expeditionHistory = buildExpeditionHistory(row);
+  const lastEntry = expeditionHistory[expeditionHistory.length - 1];
+
+  const currentStatus = expeditionHistory.length ? 'Signed' : 'Unknown';
+
+  return {
+    id: `${agendaNo}-${index}`,
+    agendaNo,
+    sender,
+    perihal,
+    createdAt,
+    currentStatus,
+    position: currentStatus,               // kept for backward compatibility
+    expeditionHistory,
+    currentRecipient: lastEntry?.recipient,
+    lastExpedition: lastEntry?.details,
+    signature: lastEntry?.signature,
+    isFromGoogleSheets: true,
+    tanggalTerima: lastEntry?.timestamp,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*   3️⃣  API publik – ambil semua dokumen                              */
+/* ------------------------------------------------------------------ */
 export async function fetchDocumentsFromGoogleSheets(): Promise<{
   documents: Document[];
   total: number;
 }> {
   try {
-    console.log("Fetching documents from Google Sheets...");
-    const rows = await fetchEntireSheet(
-      SHEET_CONFIG.spreadsheetId,
-      SHEET_CONFIG.sheetName,
-    );
-    const totalRows = rows.length;
+    const rows = await fetchEntireSheet(SHEET_CONFIG);
+    const total = rows.length;
 
-    if (totalRows === 0) {
-      console.warn("No data rows found in sheet");
-      return { documents: [], total: 0 };
-    }
+    const docs: Document[] = rows
+      .map((r, i) => convertRowToDocument(r, i))
+      .filter((d): d is Document => d !== null);
 
-    console.log(`Processing ${totalRows} rows from sheet`);
-    const documents: Document[] = [];
-    for (let i = 0; i < totalRows; i++) {
-      const doc = convertRowToDocument(rows[i], i);
-      if (doc) {
-        documents.push(doc);
-      }
-    }
+    // Urutkan terbaru → terlama
+    docs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-    console.log(`Successfully processed ${documents.length} documents from ${totalRows} rows`);
-    // Sort by creation date, newest first
-    documents.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-    return { documents, total: totalRows };
-  } catch (error) {
-    console.error("Error fetching documents from Google Sheets:", error);
+    return { documents: docs, total };
+  } catch (e) {
+    console.error('❌ fetchDocumentsFromGoogleSheets:', e);
     return { documents: [], total: 0 };
   }
 }
 
-// Convert signature canvas data to low-resolution JPEG
-export function convertSignatureToLowResJPEG(
-  signatureDataUrl: string,
+/* ------------------------------------------------------------------ */
+/*   4️⃣  Konversi tanda tangan (canvas → JPEG low‑res)                */
+/* ------------------------------------------------------------------ */
+export async function convertSignatureToLowResJPEG(
+  dataUrl: string,
 ): Promise<string> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     try {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return resolve(signatureDataUrl);
-
+      const canvas = document.createElement('canvas');
       canvas.width = 200;
       canvas.height = 100;
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) return resolve(dataUrl);
 
       const img = new Image();
       img.onload = () => {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.3));
+        resolve(canvas.toDataURL('image/jpeg', 0.3));
       };
-      img.onerror = () => {
-        resolve(signatureDataUrl); // Fallback to original on error
-      };
-      img.src = signatureDataUrl;
-    } catch (error) {
-      console.error("Error converting signature:", error);
-      resolve(signatureDataUrl); // Fallback to original on error
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    } catch (_) {
+      resolve(dataUrl);
     }
   });
 }
 
-// Update spreadsheet with expedition data by calling the backend endpoint
+/* ------------------------------------------------------------------ */
+/*   5️⃣  Update sheet melalui endpoint backend (tidak langsung ke Google) */
+/* ------------------------------------------------------------------ */
 export async function updateSpreadsheetWithExpedition(
   agendaNo: string,
   lastExpedition: string,
@@ -252,56 +185,43 @@ export async function updateSpreadsheetWithExpedition(
   signature?: string,
 ): Promise<boolean> {
   try {
-    console.log(`Updating spreadsheet for agenda ${agendaNo} via backend`);
-
-    const response = await fetch("/api/update-sheet", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+    const resp = await fetch('/api/update-sheet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         agendaNo,
         lastExpedition,
         currentLocation,
+        status,
         signature,
       }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(
-        `Failed to update spreadsheet: ${errorData.message || response.statusText}`,
-      );
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.message ?? resp.statusText);
     }
 
-    const result = await response.json();
-    console.log("Spreadsheet updated successfully:", result);
+    await resp.json(); // biasanya berisi { success: true }
     return true;
-  } catch (error) {
-    console.error("Error updating spreadsheet:", error);
+  } catch (e) {
+    console.error('❌ updateSpreadsheetWithExpedition:', e);
     return false;
   }
 }
 
-// Get sheet statistics
+/* ------------------------------------------------------------------ */
+/*   6️⃣  Statistik sederhana sheet                                    */
+/* ------------------------------------------------------------------ */
 export async function getSheetStats(): Promise<{
   totalRows: number;
   lastUpdate: Date;
 }> {
   try {
-    const rows = await fetchEntireSheet(
-      SHEET_CONFIG.spreadsheetId,
-      SHEET_CONFIG.sheetName,
-    );
-    return {
-      totalRows: rows.length,
-      lastUpdate: new Date(),
-    };
-  } catch (error) {
-    console.error("Error getting sheet stats:", error);
-    return {
-      totalRows: 0,
-      lastUpdate: new Date(),
-    };
+    const rows = await fetchEntireSheet(SHEET_CONFIG);
+    return { totalRows: rows.length, lastUpdate: new Date() };
+  } catch (e) {
+    console.error('❌ getSheetStats:', e);
+    return { totalRows: 0, lastUpdate: new Date() };
   }
 }
