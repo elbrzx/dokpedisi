@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Search, X, Save, Trash2 } from "lucide-react";
-import { useDocumentStore, Document } from "../lib/documentStore";
+import { useDocumentStore } from "../lib/documentStore";
+import { Document } from "../lib/types";
 import { useToast } from "../lib/toastContext";
 import { cn } from "../lib/utils";
 import { convertSignatureToLowResJPEG } from "../lib/utils";

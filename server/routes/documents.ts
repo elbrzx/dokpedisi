@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import { google } from "googleapis";
-import { Document } from "@shared/api";
+import { Document } from "../../shared/api";
 
 const SPREADSHEET_ID = "19FgFYyhgnMmWIVIHK-1cOmgrQIik_j4mqUnLz5aArR4";
 const SHEET_NAME = "SURATMASUK";
@@ -19,28 +19,6 @@ async function getGoogleSheetsClient() {
 
   const sheets = google.sheets({ version: "v4", auth });
   return sheets;
-}
-
-function parseCSV(csvText: string): string[][] {
-    const lines = csvText.split('\n');
-    return lines.map(line => {
-        const cells = [];
-        let current = '';
-        let inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-                inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-                cells.push(current.trim().replace(/^"|"$/g, ''));
-                current = '';
-            } else {
-                current += char;
-            }
-        }
-        cells.push(current.trim().replace(/^"|"$/g, ''));
-        return cells;
-    });
 }
 
 function convertRowToDocument(row: string[], index: number): Document | null {
@@ -155,7 +133,7 @@ export const handleGetDocuments: RequestHandler = async (req, res) => {
       }
     }
 
-    documents.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    documents.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     res.json({ documents, total: documents.length });
 
