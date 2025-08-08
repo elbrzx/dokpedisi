@@ -1,13 +1,4 @@
 // Enhanced Google Sheets integration service
-export interface GoogleSheetDocument {
-  agendaNumber: string; // row [0]
-  createdAt: Date; // row [2]
-  sender: string; // row [3]
-  perihal: string; // row [4] - subject
-  lastExpedition?: string; // row [5]
-  currentLocation?: string; // row [6]
-  signature?: string; // row [8]
-}
 
 export interface GoogleSheetsConfig {
   spreadsheetId: string;
@@ -76,64 +67,107 @@ async function fetchEntireSheet(
   }
 }
 
-// Convert row data to document format based on updated mapping
-function convertRowToDocument(
-  row: string[],
-  index: number,
-): GoogleSheetDocument | null {
+import { Document } from "./types"; // Import the main Document type
+
+
+// This function now transforms a raw sheet row into a rich Document object
+function convertRowToDocument(row: string[], index: number): Document | null {
   try {
-    // Mapping based on requirements:
-    // agendaNo = row [0]
-    // createdAt = row [2] (TANGGAL TERIMA)
-    // sender = row [3]
-    // subject = row [4]
-    // lastExpedition = row [5]
-    // currentLocation = row [6]
-    // signature = row [8]
+    // Corrected Mapping:
+    // No Agenda = row[0]
+    // Tanggal = row[1] (D/MM/YYYY)
+    // Sender = row[2]
+    // Perihal = row[3]
+    // Status = row[5] (Not used directly, derived from history)
+    // History starts at row[6]
 
-    const agendaNumber = row[0]?.trim();
-    const dateString = row[2]?.trim();
-    const sender = row[3]?.trim();
-    const perihal = row[4]?.trim(); // subject
-    const lastExpedition = row[5]?.trim() || undefined;
-    const currentLocation = row[6]?.trim() || undefined;
-    const signature = row[8]?.trim() || undefined;
+    const agendaNo = row[0]?.trim();
+    const dateString = row[1]?.trim(); // Read from Column B
+    const sender = row[2]?.trim(); // Read from Column C
+    const perihal = row[3]?.trim(); // Read from Column D
 
-    // Robust date parsing for "DD-MM-YYYY" or "MM/DD/YYYY"
-    let createdAt = new Date(); // Fallback
+    if (!agendaNo) {
+      return null;
+    }
+
+    // Robustly parse D/MM/YYYY format from Column B
+    let createdAt = new Date(0); // Default to epoch to prevent invalid dates
     if (dateString) {
-      const parts = dateString.split(/[\/\-]/);
+      const parts = dateString.split("/");
       if (parts.length === 3) {
-        // Assuming MM/DD/YYYY or DD-MM-YYYY. Let's try MM/DD/YYYY first as it's more common with Date.parse
-        let parsedDate = Date.parse(`${parts[0]}/${parts[1]}/${parts[2]}`);
-        if (isNaN(parsedDate)) {
-          // if that fails, try DD/MM/YYYY
-          parsedDate = Date.parse(`${parts[1]}/${parts[0]}/${parts[2]}`);
-        }
-        if (!isNaN(parsedDate)) {
-          createdAt = new Date(parsedDate);
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+        const year = parseInt(parts[2], 10);
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+          const parsedDate = new Date(Date.UTC(year, month, day));
+          // Check if the parsed date is valid before assigning
+          if (!isNaN(parsedDate.getTime())) {
+            createdAt = parsedDate;
+          }
         }
       }
     }
 
-    // Only create document if we have the required fields
-    if (!agendaNumber || !sender || !perihal) {
-      console.log(`Skipping row ${index}: missing required fields`, {
-        agendaNumber: !!agendaNumber,
-        sender: !!sender,
-        perihal: !!perihal,
-      });
-      return null;
+    // This part of the logic for parsing history remains the same
+    const expeditionHistory: any[] = [];
+    for (let i = 6; i < row.length; i += 3) {
+      const details = row[i]?.trim();
+      const recipient = row[i + 1]?.trim();
+      const signature = row[i + 2]?.trim();
+
+      if (details && recipient) {
+        const notesMatch = details.match(/Catatan: (.*)/);
+        const notes =
+          notesMatch && notesMatch[1] !== "-" ? notesMatch[1] : null;
+        const dateTimeString = details
+          .split(". Catatan:")[0]
+          .replace("Diterima pada ", "");
+        const [datePart] = dateTimeString.split(" jam ");
+
+        const dateParts = datePart.split("-");
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1;
+        const day = parseInt(dateParts[2], 10);
+        const timestamp = new Date(Date.UTC(year, month, day));
+
+        expeditionHistory.push({
+          timestamp: !isNaN(timestamp.getTime()) ? timestamp : new Date(0),
+          recipient,
+          signature: signature || undefined,
+          notes: notes,
+          details: details,
+        });
+      } else {
+        break;
+      }
     }
 
+    const lastHistoryEntry =
+      expeditionHistory.length > 0
+        ? expeditionHistory[expeditionHistory.length - 1]
+        : null;
+
+    // Determine status and latest expedition details
+    const currentStatus = expeditionHistory.length > 0 ? "Signed" : "Unknown";
+    const currentRecipient = lastHistoryEntry?.recipient;
+    const tanggalTerima = lastHistoryEntry?.timestamp;
+    const lastExpedition = lastHistoryEntry?.details;
+    const signature = lastHistoryEntry?.signature;
+
     return {
-      agendaNumber,
-      createdAt,
+      id: `${agendaNo}-${index}`,
+      agendaNo,
       sender,
       perihal,
+      createdAt,
+      position: currentStatus,
+      expeditionHistory,
+      currentRecipient,
       lastExpedition,
-      currentLocation,
       signature,
+      isFromGoogleSheets: true,
+      tanggalTerima,
+      currentStatus,
     };
   } catch (error) {
     console.error(`Error converting row ${index}:`, error);
@@ -141,19 +175,18 @@ function convertRowToDocument(
   }
 }
 
-// Fetch all document data from Google Sheets
+
+// This function now returns fully processed Document objects
 export async function fetchDocumentsFromGoogleSheets(): Promise<{
-  documents: GoogleSheetDocument[];
+  documents: Document[];
   total: number;
 }> {
   try {
     console.log("Fetching documents from Google Sheets...");
-
     const rows = await fetchEntireSheet(
       SHEET_CONFIG.spreadsheetId,
       SHEET_CONFIG.sheetName,
     );
-
     const totalRows = rows.length;
 
     if (totalRows === 0) {
@@ -162,9 +195,7 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<{
     }
 
     console.log(`Processing ${totalRows} rows from sheet`);
-
-    const documents: GoogleSheetDocument[] = [];
-
+    const documents: Document[] = [];
     for (let i = 0; i < totalRows; i++) {
       const doc = convertRowToDocument(rows[i], i);
       if (doc) {
@@ -172,9 +203,10 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<{
       }
     }
 
-    console.log(
-      `Successfully processed ${documents.length} documents from ${totalRows} rows`,
-    );
+    console.log(`Successfully processed ${documents.length} documents from ${totalRows} rows`);
+    // Sort by creation date, newest first
+    documents.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
     return { documents, total: totalRows };
   } catch (error) {
     console.error("Error fetching documents from Google Sheets:", error);
@@ -183,29 +215,32 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<{
 }
 
 // Convert signature canvas data to low-resolution JPEG
-export function convertSignatureToLowResJPEG(signatureDataUrl: string): string {
-  try {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+export function convertSignatureToLowResJPEG(
+  signatureDataUrl: string,
+): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(signatureDataUrl);
 
-    // Set low resolution for smaller file size
-    canvas.width = 200;
-    canvas.height = 100;
+      canvas.width = 200;
+      canvas.height = 100;
 
-    const img = new Image();
-    img.onload = () => {
-      if (ctx) {
+      const img = new Image();
+      img.onload = () => {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      }
-    };
-    img.src = signatureDataUrl;
-
-    // Convert to JPEG with low quality for smaller size
-    return canvas.toDataURL("image/jpeg", 0.3);
-  } catch (error) {
-    console.error("Error converting signature to low-res JPEG:", error);
-    return signatureDataUrl;
-  }
+        resolve(canvas.toDataURL("image/jpeg", 0.3));
+      };
+      img.onerror = () => {
+        resolve(signatureDataUrl); // Fallback to original on error
+      };
+      img.src = signatureDataUrl;
+    } catch (error) {
+      console.error("Error converting signature:", error);
+      resolve(signatureDataUrl); // Fallback to original on error
+    }
+  });
 }
 
 // Update spreadsheet with expedition data by calling the backend endpoint

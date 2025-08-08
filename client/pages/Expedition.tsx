@@ -121,12 +121,24 @@ const Expedition: React.FC = () => {
   };
 
   const filteredDocuments = useMemo(() => {
-    return documents.filter(
-      (doc) =>
-        doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.perihal.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
+    try {
+      if (!documents || documents.length === 0) return [];
+      return documents.filter((doc) => {
+        // Defensive check to prevent crashes from malformed document objects
+        if (!doc || !doc.agendaNo || !doc.sender || !doc.perihal) {
+          console.warn("Filtered out invalid document object:", doc);
+          return false;
+        }
+        return (
+          doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          doc.perihal.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      });
+    } catch (error) {
+      console.error("Error filtering documents:", error);
+      return []; // Return empty array on error to prevent crash
+    }
   }, [documents, searchTerm]);
 
   // Initialize canvas
@@ -262,7 +274,7 @@ const Expedition: React.FC = () => {
         // Convert signature to low-res JPG if available
         let processedSignature = "";
         if (signature && !isCanvasBlank(canvasRef.current)) {
-          processedSignature = convertSignatureToLowResJPEG(signature);
+          processedSignature = await convertSignatureToLowResJPEG(signature);
         }
 
         // Construct expedition details from form data
@@ -366,16 +378,16 @@ const Expedition: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowDocumentSelector(!showDocumentSelector)}
-            className="w-full py-2 px-3 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2"
+            className="w-full py-2 px-3 border border-orange-300 bg-orange-50 rounded-lg text-sm font-medium text-orange-800 hover:bg-orange-100 flex items-center justify-center gap-2 transition-colors"
           >
             <Search className="h-4 w-4" />
-            {showDocumentSelector ? "Hide" : "Select"} Documents
+            {showDocumentSelector ? "Hide Document Search" : "Search & Select Document"}
           </button>
         </div>
 
         {/* Document Selector */}
         {showDocumentSelector && (
-          <div className="border border-gray-200 rounded-lg p-3 space-y-3 bg-gray-50">
+          <div className="border border-orange-300 rounded-lg p-3 space-y-3 bg-orange-50">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
