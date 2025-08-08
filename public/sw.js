@@ -1,11 +1,7 @@
-const CACHE_NAME = 'doc-expedition-cache-v1';
+const CACHE_NAME = 'doc-expedition-cache-v2';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/client/main.tsx', // This might not be cacheable directly, but we try
-  // Add other assets like CSS, JS bundles, and images here
-  // For this project, we know there's a global.css
-  '/client/global.css',
   '/favicon.ico'
 ];
 

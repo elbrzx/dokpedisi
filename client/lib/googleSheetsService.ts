@@ -86,7 +86,7 @@ function convertRowToDocument(row: string[], index: number): Document | null {
     const sender = row[2]?.trim(); // Read from Column C
     const perihal = row[3]?.trim(); // Read from Column D
 
-    if (!agendaNo || !sender || !perihal) {
+    if (!agendaNo) {
       return null;
     }
 
