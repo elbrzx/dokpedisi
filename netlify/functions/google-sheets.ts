@@ -1,22 +1,13 @@
 import { Handler } from '@netlify/functions';
 import { google } from 'googleapis';
 import { GOOGLE_SHEETS_CONFIG } from '../../config/google-sheets.config';
+import { Document } from '../../shared/api';
 
 // Service account credentials
 const SERVICE_ACCOUNT_CREDENTIALS = GOOGLE_SHEETS_CONFIG.SERVICE_ACCOUNT;
 
 const SPREADSHEET_ID = GOOGLE_SHEETS_CONFIG.SPREADSHEET_ID;
 const SHEET_NAME = GOOGLE_SHEETS_CONFIG.SHEET_NAME;
-
-interface Document {
-  id: string;
-  agendaNo: string;
-  sender: string;
-  subject: string;
-  position: string;
-  createdAt: string;
-  expeditionHistory: any[];
-}
 
 export const handler: Handler = async (event) => {
   // Enable CORS
@@ -59,13 +50,13 @@ export const handler: Handler = async (event) => {
     const documents: Document[] = rows.map((row, index) => {
       const agendaNo = row[0] || `AGENDA-${String(index + 1).padStart(3, '0')}`; // Column A
       const sender = `${row[3] || ''} ${row[4] || ''}`.trim() || 'Unknown Sender'; // Columns D and E
-      const subject = `${row[4] || ''} ${row[5] || ''} ${row[6] || ''}`.trim() || 'No Subject'; // Columns E, F, G
+      const perihal = `${row[4] || ''} ${row[5] || ''} ${row[6] || ''}`.trim() || 'No Subject'; // Columns E, F, G
       
       return {
         id: `gs-${index + 1}`,
         agendaNo: agendaNo,
         sender: sender,
-        subject: subject,
+        perihal: perihal,
         position: 'Pending', // Default position
         createdAt: new Date().toISOString(),
         expeditionHistory: [],
