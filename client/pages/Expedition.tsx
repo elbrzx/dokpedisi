@@ -121,12 +121,24 @@ const Expedition: React.FC = () => {
   };
 
   const filteredDocuments = useMemo(() => {
-    return documents.filter(
-      (doc) =>
-        doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.perihal.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
+    try {
+      if (!documents || documents.length === 0) return [];
+      return documents.filter((doc) => {
+        // Defensive check to prevent crashes from malformed document objects
+        if (!doc || !doc.agendaNo || !doc.sender || !doc.perihal) {
+          console.warn("Filtered out invalid document object:", doc);
+          return false;
+        }
+        return (
+          doc.agendaNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          doc.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          doc.perihal.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      });
+    } catch (error) {
+      console.error("Error filtering documents:", error);
+      return []; // Return empty array on error to prevent crash
+    }
   }, [documents, searchTerm]);
 
   // Initialize canvas
@@ -262,7 +274,7 @@ const Expedition: React.FC = () => {
         // Convert signature to low-res JPG if available
         let processedSignature = "";
         if (signature && !isCanvasBlank(canvasRef.current)) {
-          processedSignature = convertSignatureToLowResJPEG(signature);
+          processedSignature = await convertSignatureToLowResJPEG(signature);
         }
 
         // Construct expedition details from form data
