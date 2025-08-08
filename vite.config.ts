@@ -4,7 +4,6 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  root: "client",
   server: {
     host: "127.0.0.1",
     port: 8080,
@@ -20,9 +19,8 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../dist/spa",
+    outDir: "dist",
   },
-  base: "./",
   plugins: [react()],
   resolve: {
     alias: {
