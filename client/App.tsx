@@ -34,6 +34,10 @@ function Navigation() {
   const { shouldBlockNavigation, onNavigationAttempt } = useNavigationGuard();
 
   const handleNavClick = (e: React.MouseEvent, path: string) => {
+    console.log(
+      "handleNavClick triggered. shouldBlockNavigation:",
+      shouldBlockNavigation,
+    );
     if (shouldBlockNavigation && location.pathname !== path) {
       e.preventDefault();
       onNavigationAttempt(path);
@@ -89,6 +93,8 @@ function AppHeader() {
 function NavigationGuardProvider({ children }: { children: React.ReactNode }) {
   const [shouldBlockNavigation, setShouldBlockNavigation] = useState(false);
   const onNavigationAttemptRef = useRef<(path: string) => void>(() => {});
+
+  console.log("NavigationGuard state:", shouldBlockNavigation);
 
   const setOnNavigationAttempt = useCallback((fn: (path: string) => void) => {
     onNavigationAttemptRef.current = fn;
