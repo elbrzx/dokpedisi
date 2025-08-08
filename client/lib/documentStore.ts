@@ -4,7 +4,6 @@ import {
 } from "./googleSheetsService";
 import { Document, ExpeditionRecord } from "./types";
 
-
 interface DocumentStore {
   documents: Document[];
   expeditions: ExpeditionRecord[];

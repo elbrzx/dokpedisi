@@ -37,13 +37,6 @@ function toColumnName(num: number): string {
   return str;
 }
 
-import { createClient } from "@supabase/supabase-js";
-
-export const handleUpdateSheet: RequestHandler = async (req, res) => {
-  console.log("Received request to update sheet with body:", req.body);
-  const { agendaNo, lastExpedition, currentLocation, signature } = req.body;
-  const status = "Diterima";
-
   if (!agendaNo) {
     return res.status(400).json({ message: "agendaNo is required" });
   }
@@ -61,35 +54,6 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
       const base64Data = signature.replace(/^data:image\/jpeg;base64,/, "");
       const buffer = Buffer.from(base64Data, "base64");
 
-      const fileName = `signatures/signature-${agendaNo}-${Date.now()}.jpg`;
-
-      const { data, error } = await supabase.storage
-        .from("signatures")
-        .upload(fileName, buffer, {
-          contentType: "image/jpeg",
-          upsert: false,
-        });
-
-      if (error) {
-        throw new Error(`Supabase upload failed: ${error.message}`);
-      }
-
-      console.log("Supabase upload successful:", data);
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("signatures")
-        .getPublicUrl(data.path);
-
-      signatureUrl = urlData.publicUrl;
-      console.log("Public URL:", signatureUrl);
-    }
-
-    // Continue with Google Sheets update
-    const sheets = await getGoogleSheetsClient();
-    const findResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:Z`,
     });
 
     const rows = findResponse.data.values;
@@ -98,7 +62,6 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
     }
 
     const rowIndex = rows.findIndex(
-      (row, index) => index > 0 && row[0] === agendaNo,
     );
 
     if (rowIndex === -1) {
@@ -106,10 +69,7 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
         .status(404)
         .json({ message: `Agenda number ${agendaNo} not found` });
     }
-    const actualRowNumber = rowIndex + 1;
 
-    const currentRow = rows[rowIndex];
-    let targetColumnIndex = -1;
     for (let i = 6; i < 26; i += 3) {
       if (!currentRow[i]) {
         targetColumnIndex = i;
@@ -120,16 +80,12 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
     if (targetColumnIndex === -1) {
       return res
         .status(500)
-        .json({ message: "No available history slots found" });
-    }
-
+      
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
       range: `${SHEET_NAME}!F${actualRowNumber}`,
       valueInputOption: "RAW",
-      requestBody: { values: [[status]] },
-    });
-
+      
     const startColumn = toColumnName(targetColumnIndex);
     const endColumn = toColumnName(targetColumnIndex + 2);
     const historyUpdateRange = `${SHEET_NAME}!${startColumn}${actualRowNumber}:${endColumn}${actualRowNumber}`;
@@ -139,19 +95,18 @@ export const handleUpdateSheet: RequestHandler = async (req, res) => {
       range: historyUpdateRange,
       valueInputOption: "RAW",
       requestBody: {
-        values: [[lastExpedition, currentLocation, signatureUrl]],
+
       },
     });
 
     res.json({
-      message: "Sheet and signature updated successfully",
       updatedRange: historyUpdateRange,
     });
   } catch (error: any) {
     console.error("Full error object:", JSON.stringify(error, null, 2));
     if (error instanceof Error) {
       res.status(500).json({
-        message: "Error processing expedition",
+
         error: error.message,
         details: error.stack,
       });

@@ -67,9 +67,6 @@ async function fetchEntireSheet(
   }
 }
 
-import { Document } from "./types"; // Import the main Document type
-
-
 // This function now transforms a raw sheet row into a rich Document object
 function convertRowToDocument(row: string[], index: number): Document | null {
   try {
