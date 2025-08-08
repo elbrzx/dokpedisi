@@ -3,10 +3,7 @@ import { Search, X, Save, Trash2 } from "lucide-react";
 import { useDocumentStore, Document } from "../lib/documentStore";
 import { useToast } from "../lib/toastContext";
 import { cn } from "../lib/utils";
-import {
-  updateSpreadsheetWithExpedition,
-  convertSignatureToLowResJPEG,
-} from "../lib/googleSheetsService";
+import { convertSignatureToLowResJPEG } from "../lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useNavigationGuard } from "../App";
@@ -283,17 +280,24 @@ const Expedition: React.FC = () => {
         }`;
 
         // Update expedition data in Google Sheets
-        const success = await updateSpreadsheetWithExpedition(
-          document.agendaNo,
-          expeditionDetails, // lastExpedition
-          recipient.trim(), // currentLocation
-          "Accepted", // status
-          processedSignature,
-        );
+        const response = await fetch("/api/update-sheet", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            agendaNo: document.agendaNo,
+            lastExpedition: expeditionDetails,
+            currentLocation: recipient.trim(),
+            status: "Accepted",
+            signature: processedSignature,
+          }),
+        });
 
-        if (!success) {
+        if (!response.ok) {
+          const errorData = await response.json();
           showToast(
-            `Failed to update expedition data for ${document.agendaNo}`,
+            `Failed to update expedition data for ${document.agendaNo}: ${errorData.message}`,
             "error",
           );
           return;
