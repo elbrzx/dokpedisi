@@ -11,6 +11,8 @@ const SHEET_CONFIG: GoogleSheetsConfig = {
   sheetName: "SURATMASUK",
 };
 
+import { Document } from "./types"; // Import the main Document type
+
 // Parse CSV data with better handling
 function parseCSV(csvText: string): string[][] {
   const lines = csvText.split("\n");
@@ -41,9 +43,7 @@ async function fetchEntireSheet(
   sheetName: string,
 ): Promise<string[][]> {
   try {
-    // Use Google Sheets CSV export URL for the entire sheet
     const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-
     console.log("Fetching from URL:", url);
 
     const response = await fetch(url);
@@ -56,7 +56,6 @@ async function fetchEntireSheet(
 
     console.log("Raw CSV rows:", rows.length);
 
-    // Filter out completely empty rows and header row
     return rows.filter((row, index) => {
       if (index === 0) return false; // Skip header row
       return row.some((cell) => cell && cell.trim() !== "");
@@ -67,48 +66,32 @@ async function fetchEntireSheet(
   }
 }
 
-import { Document } from "./types"; // Import the main Document type
-
-
-// This function now transforms a raw sheet row into a rich Document object
+// Transform raw sheet row into Document object
 function convertRowToDocument(row: string[], index: number): Document | null {
   try {
-    // Corrected Mapping:
-    // No Agenda = row[0]
-    // Tanggal = row[1] (D/MM/YYYY)
-    // Sender = row[2]
-    // Perihal = row[3]
-    // Status = row[5] (Not used directly, derived from history)
-    // History starts at row[6]
-
     const agendaNo = row[0]?.trim();
-    const dateString = row[1]?.trim(); // Read from Column B
-    const sender = row[2]?.trim(); // Read from Column C
-    const perihal = row[3]?.trim(); // Read from Column D
+    const dateString = row[1]?.trim();
+    const sender = row[2]?.trim();
+    const perihal = row[3]?.trim();
 
     if (!agendaNo) {
       return null;
     }
 
-    // Robustly parse D/MM/YYYY format from Column B
-    let createdAt = new Date(0); // Default to epoch to prevent invalid dates
+    let createdAt = new Date(0);
     if (dateString) {
       const parts = dateString.split("/");
       if (parts.length === 3) {
         const day = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+        const month = parseInt(parts[1], 10) - 1;
         const year = parseInt(parts[2], 10);
-        if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-          const parsedDate = new Date(Date.UTC(year, month, day));
-          // Check if the parsed date is valid before assigning
-          if (!isNaN(parsedDate.getTime())) {
-            createdAt = parsedDate;
-          }
+        const parsedDate = new Date(Date.UTC(year, month, day));
+        if (!isNaN(parsedDate.getTime())) {
+          createdAt = parsedDate;
         }
       }
     }
 
-    // This part of the logic for parsing history remains the same
     const expeditionHistory: any[] = [];
     for (let i = 6; i < row.length; i += 3) {
       const details = row[i]?.trim();
@@ -117,11 +100,8 @@ function convertRowToDocument(row: string[], index: number): Document | null {
 
       if (details && recipient) {
         const notesMatch = details.match(/Catatan: (.*)/);
-        const notes =
-          notesMatch && notesMatch[1] !== "-" ? notesMatch[1] : null;
-        const dateTimeString = details
-          .split(". Catatan:")[0]
-          .replace("Diterima pada ", "");
+        const notes = notesMatch && notesMatch[1] !== "-" ? notesMatch[1] : null;
+        const dateTimeString = details.split(". Catatan:")[0].replace("Diterima pada ", "");
         const [datePart] = dateTimeString.split(" jam ");
 
         const dateParts = datePart.split("-");
@@ -134,20 +114,16 @@ function convertRowToDocument(row: string[], index: number): Document | null {
           timestamp: !isNaN(timestamp.getTime()) ? timestamp : new Date(0),
           recipient,
           signature: signature || undefined,
-          notes: notes,
-          details: details,
+          notes,
+          details,
         });
       } else {
         break;
       }
     }
 
-    const lastHistoryEntry =
-      expeditionHistory.length > 0
-        ? expeditionHistory[expeditionHistory.length - 1]
-        : null;
+    const lastHistoryEntry = expeditionHistory.at(-1) ?? null;
 
-    // Determine status and latest expedition details
     const currentStatus = expeditionHistory.length > 0 ? "Signed" : "Unknown";
     const currentRecipient = lastHistoryEntry?.recipient;
     const tanggalTerima = lastHistoryEntry?.timestamp;
@@ -175,8 +151,7 @@ function convertRowToDocument(row: string[], index: number): Document | null {
   }
 }
 
-
-// This function now returns fully processed Document objects
+// Fetch documents from Google Sheets
 export async function fetchDocumentsFromGoogleSheets(): Promise<{
   documents: Document[];
   total: number;
@@ -203,9 +178,8 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<{
       }
     }
 
-    console.log(`Successfully processed ${documents.length} documents from ${totalRows} rows`);
-    // Sort by creation date, newest first
     documents.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    console.log(`Successfully processed ${documents.length} documents from ${totalRows} rows`);
 
     return { documents, total: totalRows };
   } catch (error) {
@@ -214,7 +188,7 @@ export async function fetchDocumentsFromGoogleSheets(): Promise<{
   }
 }
 
-// Convert signature canvas data to low-resolution JPEG
+// Convert signature canvas to JPEG
 export function convertSignatureToLowResJPEG(
   signatureDataUrl: string,
 ): Promise<string> {
@@ -233,17 +207,17 @@ export function convertSignatureToLowResJPEG(
         resolve(canvas.toDataURL("image/jpeg", 0.3));
       };
       img.onerror = () => {
-        resolve(signatureDataUrl); // Fallback to original on error
+        resolve(signatureDataUrl);
       };
       img.src = signatureDataUrl;
     } catch (error) {
       console.error("Error converting signature:", error);
-      resolve(signatureDataUrl); // Fallback to original on error
+      resolve(signatureDataUrl);
     }
   });
 }
 
-// Update spreadsheet with expedition data by calling the backend endpoint
+// Update sheet via backend API
 export async function updateSpreadsheetWithExpedition(
   agendaNo: string,
   lastExpedition: string,
@@ -283,7 +257,7 @@ export async function updateSpreadsheetWithExpedition(
   }
 }
 
-// Get sheet statistics
+// Get sheet stats
 export async function getSheetStats(): Promise<{
   totalRows: number;
   lastUpdate: Date;
