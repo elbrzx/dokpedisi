@@ -1,7 +1,4 @@
 import { create } from "zustand";
-import {
-  fetchDocumentsFromGoogleSheets
-} from "./googleSheetsService";
 import { Document, ExpeditionRecord } from "./types";
 
 interface DocumentStore {
@@ -35,7 +32,6 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       ...document,
       id: Date.now().toString(),
       createdAt: new Date(),
-      isFromGoogleSheets: false,
     };
     set((state) => ({
       documents: [...state.documents, newDocument],
@@ -91,11 +87,25 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   loadGoogleSheetsData: async () => {
     set({ isLoadingGoogleSheets: true, googleSheetsError: null });
     try {
-      const { documents, total } = await fetchDocumentsFromGoogleSheets();
-      // The service now returns fully processed Document objects, so no mapping is needed.
-      // The sorting is also already done in the service.
+      const response = await fetch("/api/documents");
+      if (!response.ok) {
+        throw new Error("Failed to fetch documents");
+      }
+      const { documents, total } = await response.json();
+
+      // The dates will be strings, so we need to convert them to Date objects
+      const processedDocuments = documents.map((doc: any) => ({
+        ...doc,
+        createdAt: new Date(doc.createdAt),
+        tanggalTerima: doc.tanggalTerima ? new Date(doc.tanggalTerima) : null,
+        expeditionHistory: doc.expeditionHistory.map((h: any) => ({
+          ...h,
+          timestamp: new Date(h.timestamp),
+        })),
+      }));
+
       set({
-        documents,
+        documents: processedDocuments,
         isLoadingGoogleSheets: false,
         totalDocumentsCount: total,
         lastGoogleSheetsSync: new Date(),
@@ -105,7 +115,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         googleSheetsError:
           error instanceof Error
             ? error.message
-            : "Failed to load documents from Google Sheets",
+            : "Failed to load documents from the server",
         isLoadingGoogleSheets: false,
       });
     }

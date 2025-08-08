@@ -5,20 +5,19 @@ export interface Document {
   sender: string;
   perihal: string; // Changed from subject to perihal
   position: string;
-  createdAt: Date;
+  createdAt: Date | string;
   expeditionHistory: Array<{
-    timestamp: Date;
+    timestamp: Date | string;
     recipient: string;
     signature?: string;
     notes?: string;
     details?: string;
   }>;
   currentRecipient?: string;
-  isFromGoogleSheets?: boolean;
   lastExpedition?: string;
   signature?: string;
   // New fields for the redesigned UI
-  tanggalTerima?: Date;
+  tanggalTerima?: Date | string;
   currentStatus?: string;
 }
 
