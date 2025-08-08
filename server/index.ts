@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import { handleUpdateSheet } from "./routes/update-sheet";
+import { handleGetDocuments } from "./routes/documents";
 
 export function createServer() {
   const app = express();
@@ -22,6 +23,9 @@ export function createServer() {
 
   // Google Sheets update route
   app.post("/api/update-sheet", handleUpdateSheet);
+
+  // New route to fetch documents
+  app.get("/api/documents", handleGetDocuments);
 
   return app;
 }
