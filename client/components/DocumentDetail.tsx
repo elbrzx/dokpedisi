@@ -2,7 +2,7 @@ import React from "react";
 import { X, Calendar, User, FileText, Clock, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import { Document } from "../lib/documentStore";
+import { Document } from "../lib/types";
 
 interface DocumentDetailProps {
   document: Document | null;

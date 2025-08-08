@@ -8,7 +8,8 @@ import {
   Database,
   Calendar,
 } from "lucide-react";
-import { useDocumentStore, Document } from "../lib/documentStore";
+import { useDocumentStore } from "../lib/documentStore";
+import { Document } from "../lib/types";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { cn } from "../lib/utils";

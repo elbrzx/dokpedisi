@@ -4,6 +4,7 @@ import {
 } from "./googleSheetsService";
 import { Document, ExpeditionRecord } from "./types";
 
+
 interface DocumentStore {
   documents: Document[];
   expeditions: ExpeditionRecord[];
@@ -51,31 +52,38 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   },
 
   addExpedition: (expedition) => {
-    const newExpedition: ExpeditionRecord = {
+    const newExpeditionRecord: ExpeditionRecord = {
       ...expedition,
       id: Date.now().toString(),
       submittedAt: new Date(),
     };
 
     set((state) => ({
-      expeditions: [...state.expeditions, newExpedition],
+      expeditions: [...state.expeditions, newExpeditionRecord],
       documents: state.documents.map((doc) => {
         if (expedition.documentIds.includes(doc.id)) {
-          const newExpeditionEntry = {
-            id: `exp-${Date.now()}-${doc.id}`,
-            date: expedition.date,
-            time: expedition.time,
+          // Create a new history entry that matches the Document['expeditionHistory'] type
+          const newHistoryEntry = {
+            timestamp: expedition.date, // This is already a Date object
             recipient: expedition.recipient,
             signature: expedition.signature,
             notes: expedition.notes,
-            order: doc.expeditionHistory.length + 1,
+            details: `Diterima pada ${
+              expedition.date.toISOString().split("T")[0]
+            } jam ${expedition.time}. Catatan: ${expedition.notes || "-"}`,
           };
+
+          const newHistory = [...doc.expeditionHistory, newHistoryEntry];
 
           return {
             ...doc,
-            position: "Accepted",
-            expeditionHistory: [...doc.expeditionHistory, newExpeditionEntry],
-            currentRecipient: expedition.recipient,
+            position: "Signed",
+            currentStatus: "Signed",
+            expeditionHistory: newHistory,
+            currentRecipient: newHistoryEntry.recipient,
+            tanggalTerima: newHistoryEntry.timestamp,
+            lastExpedition: newHistoryEntry.details,
+            signature: newHistoryEntry.signature,
           };
         }
         return doc;
