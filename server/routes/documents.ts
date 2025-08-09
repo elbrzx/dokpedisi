@@ -107,6 +107,14 @@ function convertRowToDocument(row: string[], index: number): Document | null {
 
 
 export const handleGetDocuments: RequestHandler = async (req, res) => {
+  // Diagnostic logging
+  console.log("Handling /api/documents request.");
+  if (process.env.GOOGLE_PRIVATE_KEY) {
+    console.log("GOOGLE_PRIVATE_KEY environment variable found.");
+  } else {
+    console.error("CRITICAL: GOOGLE_PRIVATE_KEY environment variable NOT FOUND.");
+  }
+
   try {
     const sheets = await getGoogleSheetsClient();
     const response = await sheets.spreadsheets.values.get({
