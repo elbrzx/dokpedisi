@@ -147,6 +147,7 @@ export const handleGetDocuments: RequestHandler = async (req, res) => {
 
   } catch (error: any) {
     console.error("Error fetching documents from Google Sheets:", error);
-    res.status(500).json({ message: "Error fetching documents", error: error.message, details: error.stack });
+    const detailedMessage = "Failed to fetch documents from Google Sheets. This is a backend error. Please check the following: 1. Ensure the `GOOGLE_PRIVATE_KEY` environment variable is correctly set in your Vercel project settings. 2. Ensure the service account email (`dokpedisi-agent@docupr-467003.iam.gserviceaccount.com`) has 'Viewer' access to the Google Sheet. 3. Ensure the Google Sheets API is enabled in your Google Cloud project.";
+    res.status(500).json({ message: detailedMessage, error: error.message, details: error.stack });
   }
 };
