@@ -9,16 +9,18 @@ Aplikasi Dokpedisi telah diintegrasikan dengan Google Sheets untuk mengambil dat
 ### Spreadsheet Details
 - **Spreadsheet ID**: `19FgFYyhgnMmWIVIHK-1cOmgrQIik_j4mqUnLz5aArR4`
 - **Sheet Name**: `SURATMASUK`
-- **Data Range**: `A2:G` (dari baris 2 ke bawah)
+- **Data Range**: `A2:U` (dari baris 2 ke bawah)
 
 ### Mapping Data
 Berdasarkan spesifikasi yang diberikan:
 
 | Kolom Spreadsheet | Field Aplikasi | Label UI |
 |-------------------|----------------|----------|
-| A2:A | Agenda Number | "No Agenda" |
-| D2:E | Sender | "Pengirim" |
-| E2:G | Subject | "Perihal" |
+| A2:A | no_agenda | "No Agenda" |
+| C2:C | sender | "Pengirim" |
+| D2:D | subject | "Perihal" |
+| E2:E | tanggal | "Tanggal" |
+| F2:F | status | "Status" |
 
 ## Implementasi
 
